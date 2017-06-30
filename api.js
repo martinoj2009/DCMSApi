@@ -101,9 +101,6 @@ server.get('/api/articles', function (req, res, next)
 {
 	getPosts(function(posts)
 	{
-		res.header("Access-Control-Allow-Origin", "https://martinojones.com");
-		res.header("Access-Control-Allow-Headers", "Cache-Control, Pragma, Origin, Authorization, Content-Type, X-Requested-With");
-		res.header("Access-Control-Allow-Methods", "GET");
 		res.send(200, posts);
 		console.log(posts);
 	});
@@ -145,9 +142,6 @@ server.get(/api\/articles\/(\d+)/, function (req, res, next)
 
 	getPosts(function(posts)
 	{
-		res.header("Access-Control-Allow-Origin", "https://martinojones.com");
-		res.header("Access-Control-Allow-Headers", "Cache-Control, Pragma, Origin, Authorization, Content-Type, X-Requested-With");
-		res.header("Access-Control-Allow-Methods", "GET");
 		res.send(200, posts);
 		console.log(posts);
 	}, offset);
