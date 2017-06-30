@@ -9,7 +9,7 @@ stateless.
 // Get the needed NPM packages
 var restify = require('restify'),
 fs = require('fs');
-var sqlite3 = require('sqlite3').verbose();
+var sqlite3 = require('sqlite3');
 var jwt    = require('jsonwebtoken');
 var pbkdf2 = require('pbkdf2')
 
@@ -35,7 +35,7 @@ var server = restify.createServer(
 
 
 // SQLite3 functions
-var db = new sqlite3.Database(config.Database_Location);
+var db = new sqlite3.cached.Database(config.Database_Location);
 
 // Functions
 function verifyUser(callback, username, password)
