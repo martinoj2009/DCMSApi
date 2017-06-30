@@ -1,6 +1,5 @@
 #API config and database
 blog.sqlite3
-config.json
 
 # Logs
 logs

@@ -1,0 +1,7 @@
+{
+    "comment": "This is the config file for the API server.",
+    "Database_Location": "blog.sqlite3",
+    "Pasword_Salt": "PASSWORD SALT STRING",
+    "JSON_Web_Token_Secret": "SECRET TOKEN STRING",
+    "Server_Name": "Martino's Blog API"
+}
