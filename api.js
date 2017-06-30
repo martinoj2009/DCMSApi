@@ -91,7 +91,7 @@ server.post('/ping', function create(req, res, next) {
  });
 
 
-server.get('/ping', function (req, res, next) {
+server.get('/api/ping', function (req, res, next) {
 	res.send(200,'Okay');
 	console.log('Done');
 });
