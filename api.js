@@ -8,23 +8,21 @@ stateless.
 
 // Get the needed NPM packages
 var restify = require('restify'),
-fs = require('fs');
+	fs = require('fs');
 var sqlite3 = require('sqlite3');
-var jwt    = require('jsonwebtoken');
+var jwt = require('jsonwebtoken');
 var pbkdf2 = require('pbkdf2')
 
 // Read in the config file
 // TODO: I need to find a better way to read this in, as a require
 var config = JSON.parse(fs.readFileSync('./config.json', 'utf-8'));
-if(!config)
-{
+if (!config) {
 	console.log('Error reading in config file!')
 	process.exit();
 }
 
 // Setup needed security
-if(config.Pasword_Salt === undefined || config.JSON_Web_Token_Secret === undefined)
-{
+if (config.Pasword_Salt === undefined || config.JSON_Web_Token_Secret === undefined) {
 	console.log('Whoa! security needs to be setup. Check to make sure you have sale and secret setup')
 	process.exit();
 }
@@ -33,54 +31,46 @@ var secret = config.JSON_Web_Token_Secret;
 
 
 // Configure restify server
-var server = restify.createServer(
-{
+var server = restify.createServer({
 	name: config.Server_Name,
 });
+server.use(restify.bodyParser());
 
 
 // SQLite3 functions
 var db = new sqlite3.cached.Database(config.Database_Location);
 
 // Functions
-function verifyUser(callback, username, password)
-{
+function verifyUser(callback, username, password) {
 	var derivedKey = pbkdf2.pbkdf2Sync(password, salt, 1, 32, 'sha256');
 	password = derivedKey.toString('hex')
-	var query = db.all("select username from auth_user where username == ? and password == ?", [username, password], function(err, data)
-	{
+	var query = db.all("select username from auth_user where username == ? and password == ?", [username, password], function (err, data) {
 		console.log(data);
 		callback(data);
 	});
 
 }
 
-function getPosts(callback, offset)
-{
-	if(offset === undefined)
-	{
+function getPosts(callback, offset) {
+	if (offset === undefined) {
 		offset = 0;
 	}
 
-	db.all("select id,post_title,post_short,post_date from blog_status limit 5 offset " + offset,function(err,rows){
-		callback(rows);	
+	db.all("select id,post_title,post_short,post_date from blog_status limit 5 offset " + offset, function (err, rows) {
+		callback(rows);
 	})
 };
 
-function getArticle(callback, id)
-{
-	db.all("select * from blog_status where id == " + id,function(err,rows){
-	callback(rows);
+function getArticle(callback, id) {
+	db.all("select * from blog_status where id == " + id, function (err, rows) {
+		callback(rows);
 	})
 };
 
-function getAlerts(callback)
-{
+function getAlerts(callback) {
 	//This function is for getting any alerts that should be posted to the page
-	db.all("select * from alerts limit 1", function(err, rows)
-	{
-		if(err)
-		{
+	db.all("select * from alerts limit 1", function (err, rows) {
+		if (err) {
 			callback(undefined);
 			return;
 		}
@@ -91,47 +81,35 @@ function getAlerts(callback)
 
 // APIs
 server.get('/api/ping', function (req, res, next) {
-	res.send(200,'Okay');
+	res.send(200, 'Okay');
 });
 
 
 // This is for getting pages of articles with offset
-server.get(/api\/articles\/(\d+)/, function (req, res, next)
-{
-	if(req.params[0] > 1000)
-	{
+server.get(/api\/articles\/(\d+)/, function (req, res, next) {
+	if (req.params[0] > 1000) {
 		console.log("Page request bigger than limit! ");
 		res.send(404, "Can\'t find what you\'re looking for!");
 	}
 
-	try
-	{
+	try {
 		var offset = parseInt(req.params[0]);
-	}
-	catch(e)
-	{
+	} catch (e) {
 		console.log("Error parsing offset!");
 		res.send(404, "I can\'t seem to read your offset");
 	}
 
-	if(offset < 0)
-	{
+	if (offset < 0) {
 		res.send(404, "Can\'t find what you\'re looking for!");
-	}
-	else if(offset === 1)
-	{
+	} else if (offset === 1) {
 		offset = 0;
-	}
-	else
-	{
+	} else {
 		offset = offset * 5 - 5;
 	}
-	
 
-	getPosts(function(posts)
-	{
-		if(posts === undefined || posts === null)
-		{
+
+	getPosts(function (posts) {
+		if (posts === undefined || posts === null) {
 			res.send(404, "Articles not found");
 			return;
 		}
@@ -142,20 +120,15 @@ server.get(/api\/articles\/(\d+)/, function (req, res, next)
 
 });
 
-server.get('/api/alerts', function(req, res, next) 
-{
+server.get('/api/alerts', function (req, res, next) {
 
-	getAlerts(function(message)
-	{
+	getAlerts(function (message) {
 		console.log("Message: " + message);
-		if(message == "" || message === undefined || message === null)
-		{
+		if (message == "" || message === undefined || message === null) {
 			res.setHeader('Content-Type', 'application/json');
 			res.send(200, '{message: null}');
 			return;
-		}
-		else
-		{
+		} else {
 			res.setHeader('Content-Type', 'application/json');
 			res.send(200, message);
 			return;
@@ -164,21 +137,17 @@ server.get('/api/alerts', function(req, res, next)
 
 });
 
-server.post('/api/login', function(req, res, next)
-{
+server.post('/api/login', function (req, res, next) {
 	var username = req.headers.username;
 	var password = req.headers.password;
-	if(!username || !password)
-	{
+	if (!username || !password) {
 		res.send(401, "Invalid login!");
 		return;
 	}
 
 	// Get the user
-	verifyUser(function(user)
-	{
-		if(!user)
-		{
+	verifyUser(function (user) {
+		if (!user) {
 			res.send(401, "Invalid login!");
 			return;
 		}
@@ -186,36 +155,122 @@ server.post('/api/login', function(req, res, next)
 		// Valid user!
 		console.log("User logged in: " + user[0]);
 
-		jwt.sign(username, secret, function(err, token){
+		jwt.sign(username, secret, function (err, token) {
 			res.json({
-          success: true,
-          message: 'Enjoy your token!',
-          token: token
-        });
+				success: true,
+				message: 'Enjoy your token!',
+				token: token
+			});
 			console.log(token);
-        });
+		});
 
-        
+
 
 
 	}, username, password);
 
 });
 
-server.get(/api\/article\/(\d+)/, function (req,res,next)
-{
+server.get(/api\/article\/(\d+)/, function (req, res, next) {
 	var id = req.params[0];
-	getArticle(function(post)
-	{
-		if(post === undefined || post === null)
-		{
+	getArticle(function (post) {
+		if (post === undefined || post === null) {
 			res.send(404, "Article not found");
 			return;
 		}
 
 		res.setHeader('Content-Type', 'application/json');
 		res.send(200, post)
-	}, id);	
+	}, id);
+
+});
+
+/*
+	This section is for authenticated requests ONLY! Always check for tokens!
+*/
+server.post('/api/article/post', function (req, res, next) {
+	// UNDER DEVELOPMENT
+	// This function is for posting articles, NOT updating
+
+	// Make sure they have a valid token
+	var token = req.headers['x-access-token'];
+
+	if (token === undefined) {
+		res.send(401, "Invalid token!");
+		return;
+	}
+
+	if (!req.body) {
+		res.send(400, "Invalid post format!");
+		console.log(req.body);
+		return;
+	}
+
+	// Make the post
+	var post = {};
+	post.post_title = req.body.post_title;
+	post.post_date = new Date(); // We need to do something about the date time, they will want to set the timezone!
+	post.post_text = req.body.post_text;
+	post.post_image = req.body.post_image;
+	post.post_short = req.body.post_short;
+
+	// Check requirements
+	if(post.post_title === undefined || post.post_date === undefined)
+	{
+		console.log('Error making post!' , post);
+		res.send(400, "I was not able to make a post with the data provided!");
+		return;
+	}
+
+	console.log(post);
+
+
+	// Do this when done
+	res.send(200, "Posted");
+
+
+});
+
+server.post('/api/article/update', function (req, res, next) {
+	// UNDER DEVELOPMENT
+	// This function is for posting articles, NOT updating
+
+	// Make sure they have a valid token
+	var token = req.body.token || req.query.token || req.headers['x-access-token'];
+
+	if (token === undefined) {
+		res.send(401, "Invalid token!");
+		return;
+	}
+
+	if (!req.body) {
+		res.send(400, "Invalid post format!");
+		console.log(req.body);
+		return;
+	}
+
+	// Make the post
+	var post = {};
+	post.post_title = req.body.post_title;
+	post.post_date = new Date(); // We need to do something about the date time, they will want to set the timezone!
+	post.post_text = req.body.post_text;
+	post.post_image = req.body.post_image;
+	post.post_short = req.body.post_short;
+
+	// Check requirements
+	if(post.post_title === undefined || post.post_date === undefined)
+	{
+		console.log('Error making post!' , post);
+		res.send(400, "I was not able to make a post with the data provided!");
+		return;
+	}
+
+	console.log(post);
+
+
+	// Do this when done
+	res.send(200, "Posted");
+
 
 });
 
