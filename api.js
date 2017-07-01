@@ -23,8 +23,13 @@ if(!config)
 }
 
 // Setup needed security
-var salt = config.salt;
-var secret = config.secret;
+if(config.Pasword_Salt === undefined || config.JSON_Web_Token_Secret === undefined)
+{
+	console.log('Whoa! security needs to be setup. Check to make sure you have sale and secret setup')
+	process.exit();
+}
+var salt = config.Pasword_Salt;
+var secret = config.JSON_Web_Token_Secret;
 
 
 // Configure restify server
@@ -87,7 +92,6 @@ function getAlerts(callback)
 // APIs
 server.get('/api/ping', function (req, res, next) {
 	res.send(200,'Okay');
-	console.log('Done');
 });
 
 
@@ -132,8 +136,8 @@ server.get(/api\/articles\/(\d+)/, function (req, res, next)
 			return;
 		}
 
+		res.setHeader('Content-Type', 'application/json');
 		res.send(200, posts);
-		console.log(posts);
 	}, offset);
 
 });
@@ -152,6 +156,7 @@ server.get('/api/alerts', function(req, res, next)
 		}
 		else
 		{
+			res.setHeader('Content-Type', 'application/json');
 			res.send(200, message);
 			return;
 		}
@@ -208,6 +213,7 @@ server.get(/api\/article\/(\d+)/, function (req,res,next)
 			return;
 		}
 
+		res.setHeader('Content-Type', 'application/json');
 		res.send(200, post)
 	}, id);	
 
