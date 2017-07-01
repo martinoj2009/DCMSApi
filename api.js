@@ -85,27 +85,11 @@ function getAlerts(callback)
 
 
 // APIs
-server.post('/ping', function create(req, res, next) {
-   res.send(200, Math.random().toString(36).substr(3, 8));
-   return next();
- });
-
-
 server.get('/api/ping', function (req, res, next) {
 	res.send(200,'Okay');
 	console.log('Done');
 });
 
-// To be removed!
-server.get('/api/articles', function (req, res, next)
-{
-	getPosts(function(posts)
-	{
-		res.send(200, posts);
-		console.log(posts);
-	});
-
-});
 
 // This is for getting pages of articles with offset
 server.get(/api\/articles\/(\d+)/, function (req, res, next)
@@ -142,6 +126,12 @@ server.get(/api\/articles\/(\d+)/, function (req, res, next)
 
 	getPosts(function(posts)
 	{
+		if(posts === undefined || posts === null)
+		{
+			res.send(404, "Articles not found");
+			return;
+		}
+
 		res.send(200, posts);
 		console.log(posts);
 	}, offset);
@@ -212,6 +202,12 @@ server.get(/api\/article\/(\d+)/, function (req,res,next)
 	var id = req.params[0];
 	getArticle(function(post)
 	{
+		if(post === undefined || post === null)
+		{
+			res.send(404, "Article not found");
+			return;
+		}
+
 		res.send(200, post)
 	}, id);	
 
