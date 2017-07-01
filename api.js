@@ -62,7 +62,7 @@ function getPosts(callback, offset)
 		offset = 0;
 	}
 
-	db.all("select id,post_title,post_short from blog_status limit 5 offset " + offset,function(err,rows){
+	db.all("select id,post_title,post_short,post_date from blog_status limit 5 offset " + offset,function(err,rows){
 		callback(rows);	
 	})
 };
