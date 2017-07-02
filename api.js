@@ -43,6 +43,7 @@ var db = new sqlite3.cached.Database(config.Database_Location);
 // Functions
 function verifyUser(callback, username, password) {
 	var derivedKey = pbkdf2.pbkdf2Sync(password, salt, 1, 32, 'sha256');
+	console.log(derivedKey.toString('hex'));
 	password = derivedKey.toString('hex')
 	var query = db.all("select username from auth_user where username == ? and password == ?", [username, password], function (err, data) {
 		console.log(data);
@@ -147,13 +148,14 @@ server.post('/api/login', function (req, res, next) {
 
 	// Get the user
 	verifyUser(function (user) {
-		if (!user) {
+		if (user === undefined || user === null) {
 			res.send(401, "Invalid login!");
+			console.log(user);
 			return;
 		}
 
 		// Valid user!
-		console.log("User logged in: " + user[0]);
+		console.log("User logged in: " + user);
 
 		jwt.sign(username, secret, function (err, token) {
 			res.json({
@@ -195,38 +197,59 @@ server.post('/api/article/post', function (req, res, next) {
 	// Make sure they have a valid token
 	var token = req.headers['x-access-token'];
 
-	if (token === undefined) {
-		res.send(401, "Invalid token!");
-		return;
+	// decode token
+	if (token) {
+
+		// verifies secret and checks exp
+		jwt.verify(token, secret, function (err, decoded) {
+			if (err) {
+				return res.json({
+					success: false,
+					message: 'Failed to authenticate token.'
+				});
+			} else {
+				// if everything is good, save to request for use in other routes
+				req.decoded = decoded;
+				if (!req.body) {
+					res.send(400, "Invalid post format!");
+					console.log(req.body);
+					return;
+				}
+
+				// Make the post
+				var post = {};
+				post.post_title = req.body.post_title;
+				post.post_date = new Date(); // We need to do something about the date time, they will want to set the timezone!
+				post.post_text = req.body.post_text;
+				post.post_image = req.body.post_image;
+				post.post_short = req.body.post_short;
+
+				// Check requirements
+				if (post.post_title === undefined || post.post_date === undefined) {
+					console.log('Error making post!', post);
+					res.send(400, "I was not able to make a post with the data provided!");
+					return;
+				}
+
+				console.log(post);
+
+
+				// Do this when done
+				res.send(200, "Posted");
+			}
+		});
+
+	} else {
+
+		// if there is no token
+		// return an error
+		return res.status(403).send({
+			success: false,
+			message: 'No token provided.'
+		});
+
 	}
 
-	if (!req.body) {
-		res.send(400, "Invalid post format!");
-		console.log(req.body);
-		return;
-	}
-
-	// Make the post
-	var post = {};
-	post.post_title = req.body.post_title;
-	post.post_date = new Date(); // We need to do something about the date time, they will want to set the timezone!
-	post.post_text = req.body.post_text;
-	post.post_image = req.body.post_image;
-	post.post_short = req.body.post_short;
-
-	// Check requirements
-	if(post.post_title === undefined || post.post_date === undefined)
-	{
-		console.log('Error making post!' , post);
-		res.send(400, "I was not able to make a post with the data provided!");
-		return;
-	}
-
-	console.log(post);
-
-
-	// Do this when done
-	res.send(200, "Posted");
 
 
 });
@@ -238,38 +261,60 @@ server.post('/api/article/update', function (req, res, next) {
 	// Make sure they have a valid token
 	var token = req.body.token || req.query.token || req.headers['x-access-token'];
 
-	if (token === undefined) {
-		res.send(401, "Invalid token!");
-		return;
+	// decode token
+	if (token) {
+
+		// verifies secret and checks exp
+		jwt.verify(token, secret, function (err, decoded) {
+			if (err) {
+				return res.json({
+					success: false,
+					message: 'Failed to authenticate token.'
+				});
+			} else {
+				// if everything is good, save to request for use in other routes
+				req.decoded = decoded;
+				if (!req.body) {
+					res.send(400, "Invalid post format!");
+					console.log(req.body);
+					return;
+				}
+
+				// Make the post
+				var post = {};
+				post.post_title = req.body.post_title;
+				post.post_date = new Date(); // We need to do something about the date time, they will want to set the timezone!
+				post.post_text = req.body.post_text;
+				post.post_image = req.body.post_image;
+				post.post_short = req.body.post_short;
+
+				// Check requirements
+				if (post.post_title === undefined || post.post_date === undefined) {
+					console.log('Error making post!', post);
+					res.send(400, "I was not able to make a post with the data provided!");
+					return;
+				}
+
+				console.log(post);
+
+
+				// Do this when done
+				res.send(200, "Posted");
+			}
+		});
+
+	} else {
+
+		// if there is no token
+		// return an error
+		return res.status(403).send({
+			success: false,
+			message: 'No token provided.'
+		});
+
 	}
 
-	if (!req.body) {
-		res.send(400, "Invalid post format!");
-		console.log(req.body);
-		return;
-	}
 
-	// Make the post
-	var post = {};
-	post.post_title = req.body.post_title;
-	post.post_date = new Date(); // We need to do something about the date time, they will want to set the timezone!
-	post.post_text = req.body.post_text;
-	post.post_image = req.body.post_image;
-	post.post_short = req.body.post_short;
-
-	// Check requirements
-	if(post.post_title === undefined || post.post_date === undefined)
-	{
-		console.log('Error making post!' , post);
-		res.send(400, "I was not able to make a post with the data provided!");
-		return;
-	}
-
-	console.log(post);
-
-
-	// Do this when done
-	res.send(200, "Posted");
 
 
 });

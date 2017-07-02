@@ -2,3 +2,4 @@ TODO:
 /api/articles
 /api/feed
 
+In some cases I'm sending JSON and in others I'm sending strings, I need this to all be JSON sent back to the client. 
