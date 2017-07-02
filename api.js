@@ -51,6 +51,29 @@ function verifyUser(callback, username, password) {
 
 }
 
+function verifyUsername(callback, username)
+{
+	var query = db.all("select username from auth_user where username == ?", username, function(err, data)
+	{
+		if(err)
+		{
+			callback(false);
+		}
+		else
+		{
+			callback(true);
+		}
+	})
+}
+
+function createUser(callback, username, password, email, firstname, lastname, isActive, isAdmin, )
+{
+	// TODO
+	db.run("BEGIN TRANSACTION");
+	db.run("INSERT OR IGNORE INTO articles (name, id, created) VALUES (?,?,?)", [article["title"], article["pageid"], article["timestamp"]]);
+    db.run("END");
+}
+
 function getPosts(callback, offset) {
 	if (offset === undefined) {
 		offset = 0;
@@ -137,6 +160,7 @@ server.get('/api/alerts', function (req, res, next) {
 
 });
 
+// Authentication and registration
 server.post('/api/login', function (req, res, next) {
 	var username = req.headers.username;
 	var password = req.headers.password;
@@ -170,6 +194,11 @@ server.post('/api/login', function (req, res, next) {
 
 	}, username, password);
 
+});
+
+server.post('/api/register', function(req, res, next)
+{
+	
 });
 
 server.get(/api\/article\/(\d+)/, function (req, res, next) {
