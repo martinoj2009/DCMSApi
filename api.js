@@ -43,7 +43,6 @@ var db = new sqlite3.cached.Database(config.Database_Location);
 // Functions
 function verifyUser(callback, username, password) {
 	var derivedKey = pbkdf2.pbkdf2Sync(password, salt, 1, 32, 'sha256');
-	console.log(derivedKey.toString('hex'));
 	password = derivedKey.toString('hex')
 	var query = db.all("select username from auth_user where username == ? and password == ?", [username, password], function (err, data) {
 		console.log(data);
@@ -148,14 +147,14 @@ server.post('/api/login', function (req, res, next) {
 
 	// Get the user
 	verifyUser(function (user) {
-		if (user === undefined || user === null) {
+		if (user[0] === undefined || user[0] === null) {
 			res.send(401, "Invalid login!");
-			console.log(user);
+			console.log(user[0]);
 			return;
 		}
 
 		// Valid user!
-		console.log("User logged in: " + user);
+		console.log("User logged in: " + user[0]);
 
 		jwt.sign(username, secret, function (err, token) {
 			res.json({
