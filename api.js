@@ -211,6 +211,29 @@ server.post('/api/login', function (req, res, next) {
 
 server.post('/api/register', function(req, res, next)
 {
+	//First make sure the username doesn't exist and then make the user
+	// Make sure needed information is provided
+
+	var userRegistrationData;
+	userRegistrationData.FirstName = res.body.FirstName;
+	userRegistrationData.LastName = res.body.LastName;
+	userRegistrationData.Email = res.body.Email;
+	userRegistrationData.Username = res.body.Username;
+	userRegistrationData.Password = res.body.Password;
+
+	// Verify provided information
+	// Check null || empty
+	if(userRegistrationData.FirstName === undefined || userRegistrationData.LastName === undefined || userRegistrationData.Email === undefined || userRegistrationData.Username === undefined || userRegistrationData.Password === undefined)
+	{
+		return res.status(403).send({
+			success: false,
+			message: 'Invalid data provided.'
+		});
+		return;
+	}
+
+	// Make sure email was provided
+	
 	
 });
 
