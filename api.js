@@ -43,7 +43,8 @@ var db = new sqlite3.cached.Database(config.Database_Location);
 // Functions
 function verifyUser(callback, username, password) {
 	var derivedKey = pbkdf2.pbkdf2Sync(password, salt, 1, 32, 'sha256');
-	password = derivedKey.toString('hex')
+	password = derivedKey.toString('hex');
+
 	var query = db.all("select username from auth_user where username == ? and password == ?", [username, password], function (err, data) {
 		console.log(data);
 		callback(data);
@@ -66,12 +67,24 @@ function verifyUsername(callback, username)
 	})
 }
 
-function createUser(callback, username, password, email, firstname, lastname, isActive, isAdmin, )
+function createUser(callback, username, password, email, firstname, lastname, isActive, isAdmin)
 {
+	// Hash password
+	var derivedKey = pbkdf2.pbkdf2Sync(password, salt, 1, 32, 'sha256');
+	password = derivedKey.toString('hex');
+
 	// TODO
-	db.run("BEGIN TRANSACTION");
-	db.run("INSERT OR IGNORE INTO articles (name, id, created) VALUES (?,?,?)", [article["title"], article["pageid"], article["timestamp"]]);
-    db.run("END");
+	db.run("INSERT OR IGNORE INTO articles (username, password, email, first_name, last_name, is_active, is_admin) VALUES (?,?,?,?,?,?,?)", [username, password, email, firstname, lastname, isActive, isAdmin], function(err, data)
+		{
+			if(err)
+			{
+				callback(false);
+			}
+			else
+			{
+				callback(true);
+			}
+		});
 }
 
 function getPosts(callback, offset) {
