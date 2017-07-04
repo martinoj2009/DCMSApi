@@ -1,5 +1,6 @@
 /*
-Martino Jones
+DCMS - API
+Author: Martino Jones
 20170601
 This is the API for the blog. This API should never serve HTML/CSS/IMAGE/MULTIMEDIA, it's job is to access a DB
 when needed and serve JSON data. This API also controls the state of the application, the web application should be 
