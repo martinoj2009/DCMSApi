@@ -3,5 +3,6 @@
     "Database_Location": "blog.sqlite3",
     "Pasword_Salt": "PASSWORD SALT STRING",
     "JSON_Web_Token_Secret": "SECRET TOKEN STRING",
-    "Server_Name": "Martino's Blog API"
+    "Server_Name": "Martino's Blog API",
+    "Password_Min_Length": 7
 }

@@ -22,7 +22,7 @@ if (!config) {
 }
 
 // Setup needed security
-if (config.Pasword_Salt === undefined || config.JSON_Web_Token_Secret === undefined) {
+if (config.Pasword_Salt === undefined || config.JSON_Web_Token_Secret === undefined || config.Password_Min_Length === undefined) {
 	console.log('Whoa! security needs to be setup. Check to make sure you have sale and secret setup')
 	process.exit();
 }
@@ -46,45 +46,35 @@ function verifyUser(callback, username, password) {
 	password = derivedKey.toString('hex');
 
 	var query = db.all("select username from auth_user where username == ? and password == ?", [username, password], function (err, data) {
-		console.log(data);
 		callback(data);
 	});
 
 }
 
-function verifyUsername(callback, username)
-{
-	var query = db.all("select username from auth_user where username == ?", username, function(err, data)
-	{
-		if(err)
-		{
+function verifyUsername(callback, username) {
+	db.all("select username from auth_user where username == ?", username, function (err, data) {
+		if (data[0] === undefined || data[0] === null) {
 			callback(false);
-		}
-		else
-		{
+		} else {
 			callback(true);
 		}
 	})
 }
 
-function createUser(callback, username, password, email, firstname, lastname, isActive, isAdmin)
-{
+function createUser(callback, username, password, email, firstname, lastname, isActive, isAdmin) {
 	// Hash password
 	var derivedKey = pbkdf2.pbkdf2Sync(password, salt, 1, 32, 'sha256');
 	password = derivedKey.toString('hex');
 
 	// TODO
-	db.run("INSERT OR IGNORE INTO articles (username, password, email, first_name, last_name, is_active, is_admin) VALUES (?,?,?,?,?,?,?)", [username, password, email, firstname, lastname, isActive, isAdmin], function(err, data)
-		{
-			if(err)
-			{
-				callback(false);
-			}
-			else
-			{
-				callback(true);
-			}
-		});
+	db.run("INSERT OR IGNORE INTO auth_user (username, password, email, first_name, last_name, is_active, is_admin) VALUES (?,?,?,?,?,?,?)", [username, password, email, firstname, lastname, isActive, isAdmin], function (err, data) {
+		if (err) {
+			console.log(err);
+			callback(false);
+		} else {
+			callback(true);
+		}
+	});
 }
 
 function getPosts(callback, offset) {
@@ -186,12 +176,11 @@ server.post('/api/login', function (req, res, next) {
 	verifyUser(function (user) {
 		if (user[0] === undefined || user[0] === null) {
 			res.send(401, "Invalid login!");
-			console.log(user[0]);
 			return;
 		}
 
 		// Valid user!
-		console.log("User logged in: " + user[0]);
+		console.log("User logged in: " + user[0].username);
 
 		jwt.sign(username, secret, function (err, token) {
 			res.json({
@@ -199,7 +188,6 @@ server.post('/api/login', function (req, res, next) {
 				message: 'Enjoy your token!',
 				token: token
 			});
-			console.log(token);
 		});
 
 
@@ -209,32 +197,84 @@ server.post('/api/login', function (req, res, next) {
 
 });
 
-server.post('/api/register', function(req, res, next)
-{
+server.post('/api/register', function (req, res, next) {
 	//First make sure the username doesn't exist and then make the user
 	// Make sure needed information is provided
 
-	var userRegistrationData;
-	userRegistrationData.FirstName = res.body.FirstName;
-	userRegistrationData.LastName = res.body.LastName;
-	userRegistrationData.Email = res.body.Email;
-	userRegistrationData.Username = res.body.Username;
-	userRegistrationData.Password = res.body.Password;
+	var userRegistrationData = {};
+	userRegistrationData.FirstName = req.body.FirstName;
+	userRegistrationData.LastName = req.body.LastName;
+	userRegistrationData.Email = req.body.Email;
+	userRegistrationData.Username = req.body.Username;
+	userRegistrationData.Password = req.body.Password;
+	userRegistrationData.isActive = true;
+	userRegistrationData.isAdmin = false;
 
 	// Verify provided information
 	// Check null || empty
-	if(userRegistrationData.FirstName === undefined || userRegistrationData.LastName === undefined || userRegistrationData.Email === undefined || userRegistrationData.Username === undefined || userRegistrationData.Password === undefined)
-	{
-		return res.status(403).send({
-			success: false,
-			message: 'Invalid data provided.'
-		});
+	if (userRegistrationData.FirstName === undefined || userRegistrationData.LastName === undefined || 
+	userRegistrationData.Email === undefined || userRegistrationData.Username === undefined || 
+	userRegistrationData.Password === undefined) {
+		res.send(403, 'Invalid data, make sure all data is provided.');
 		return;
+	} else {
+		// Verify email format
+		var reg = /^([A-Za-z0-9_\-\.])+\@([A-Za-z0-9_\-\.])+\.([A-Za-z]{2,4})$/;
+
+		if (reg.test(userRegistrationData.Email) == false) {
+			res.send(403, 'Invalid email format!');
+			return;
+
+		}
+
+		// Make sure password is at least 
+		if(userRegistrationData.Password === undefined || userRegistrationData.Password.length < config.Password_Min_Length)
+		{
+			res.send(403, 'Password does not meet the min complexity');
+			return;
+		}
+
+		// Make sure the user doesn't exist
+		verifyUsername(function(exists)
+		{
+			if(exists === false)
+			{
+				// Register user
+		createUser(function(confirm)
+		{
+			if(confirm)
+			{
+				res.send(200, 'Registration succeeded.');
+				return;
+
+			}
+			else
+			{
+				res.send(403, 'Registration failed.');
+				return;
+
+			}
+		}, userRegistrationData.Username, 
+		userRegistrationData.Password, 
+		userRegistrationData.Email, 
+		userRegistrationData.FirstName, 
+		userRegistrationData.LastName, 
+		userRegistrationData.isActive, 
+		userRegistrationData.isAdmin)
+			}
+			else
+			{
+				res.send(403, 'Username already exists.');
+				return;
+			}
+		}, userRegistrationData.Username)
+
+		
 	}
 
 	// Make sure email was provided
-	
-	
+
+
 });
 
 server.get(/api\/article\/(\d+)/, function (req, res, next) {
