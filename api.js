@@ -54,7 +54,7 @@ function verifyUser(callback, username, password) {
 
 function verifyUsername(callback, username) {
 	db.all("select username from auth_user where username == ?", username, function (err, data) {
-		if (data[0] === undefined || data[0] === null) {
+		if (!data || data[0] === undefined || data[0] === null) {
 			callback(false);
 		} else {
 			callback(true);
@@ -105,6 +105,11 @@ function getAlerts(callback) {
 	})
 }
 
+function createArticle(callback, title, text, date )
+{
+
+}
+
 
 // APIs
 server.get('/api/ping', function (req, res, next) {
@@ -151,7 +156,7 @@ server.get('/api/alerts', function (req, res, next) {
 
 	getAlerts(function (message) {
 		console.log("Message: " + message);
-		if (message == "" || message === undefined || message === null) {
+		if (message === "" || message === undefined || message === null) {
 			res.setHeader('Content-Type', 'application/json');
 			res.send(200, '{message: null}');
 			return;
@@ -175,7 +180,7 @@ server.post('/api/login', function (req, res, next) {
 
 	// Get the user
 	verifyUser(function (user) {
-		if (user[0] === undefined || user[0] === null) {
+		if (!user || user[0] === undefined || user[0] === null) {
 			res.send(401, "Invalid login!");
 			return;
 		}
@@ -183,12 +188,23 @@ server.post('/api/login', function (req, res, next) {
 		// Valid user!
 		console.log("User logged in: " + user[0].username);
 
-		jwt.sign(username, secret, function (err, token) {
-			res.json({
-				success: true,
-				message: 'Enjoy your token!',
-				token: token
-			});
+		jwt.sign({user: username}, secret, { expiresIn: config.Session_Timeout }, function (err, token) {
+			if (err) {
+				console.log(err);
+				res.json({
+					success: false,
+					message: 'Failed to sign web token'
+				})
+				return;
+			} else {
+				res.json({
+					success: true,
+					message: 'Enjoy your token!',
+					token: token
+				});
+				return;
+			}
+
 		});
 
 
@@ -213,9 +229,9 @@ server.post('/api/register', function (req, res, next) {
 
 	// Verify provided information
 	// Check null || empty
-	if (userRegistrationData.FirstName === undefined || userRegistrationData.LastName === undefined || 
-	userRegistrationData.Email === undefined || userRegistrationData.Username === undefined || 
-	userRegistrationData.Password === undefined) {
+	if (userRegistrationData.FirstName === undefined || userRegistrationData.LastName === undefined ||
+		userRegistrationData.Email === undefined || userRegistrationData.Username === undefined ||
+		userRegistrationData.Password === undefined) {
 		res.send(403, 'Invalid data, make sure all data is provided.');
 		return;
 	} else {
@@ -229,48 +245,39 @@ server.post('/api/register', function (req, res, next) {
 		}
 
 		// Make sure password is at least 
-		if(userRegistrationData.Password === undefined || userRegistrationData.Password.length < config.Password_Min_Length)
-		{
+		if (userRegistrationData.Password === undefined || userRegistrationData.Password.length < config.Password_Min_Length) {
 			res.send(403, 'Password does not meet the min complexity');
 			return;
 		}
 
 		// Make sure the user doesn't exist
-		verifyUsername(function(exists)
-		{
-			if(exists === false)
-			{
+		verifyUsername(function (exists) {
+			if (exists === false) {
 				// Register user
-		createUser(function(confirm)
-		{
-			if(confirm)
-			{
-				res.send(200, 'Registration succeeded.');
-				return;
+				createUser(function (confirm) {
+						if (confirm) {
+							res.send(200, 'Registration succeeded.');
+							return;
 
-			}
-			else
-			{
-				res.send(403, 'Registration failed.');
-				return;
+						} else {
+							res.send(403, 'Registration failed.');
+							return;
 
-			}
-		}, userRegistrationData.Username, 
-		userRegistrationData.Password, 
-		userRegistrationData.Email, 
-		userRegistrationData.FirstName, 
-		userRegistrationData.LastName, 
-		userRegistrationData.isActive, 
-		userRegistrationData.isAdmin)
-			}
-			else
-			{
+						}
+					}, userRegistrationData.Username,
+					userRegistrationData.Password,
+					userRegistrationData.Email,
+					userRegistrationData.FirstName,
+					userRegistrationData.LastName,
+					userRegistrationData.isActive,
+					userRegistrationData.isAdmin)
+			} else {
 				res.send(403, 'Username already exists.');
 				return;
 			}
 		}, userRegistrationData.Username)
 
-		
+
 	}
 
 	// Make sure email was provided
