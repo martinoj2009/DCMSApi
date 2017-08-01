@@ -10,9 +10,9 @@ stateless.
 // Get the needed NPM packages
 var restify = require('restify'),
 fs = require('fs');
-var sqlite3 = require('sqlite3');
 var jwt = require('jsonwebtoken');
-var pbkdf2 = require('pbkdf2');
+var ApiBackend = require('./ApiBackend.js');
+var Backend = new ApiBackend();
 
 
 // Read in the config file
@@ -23,11 +23,6 @@ if (!config) {
 	process.exit();
 }
 
-// Setup needed security
-if (config.Pasword_Salt === undefined || config.JSON_Web_Token_Secret === undefined || config.Password_Min_Length === undefined) {
-	console.log('Whoa! security needs to be setup. Check to make sure you have sale and secret setup')
-	process.exit();
-}
 var salt = config.Pasword_Salt;
 var secret = config.JSON_Web_Token_Secret;
 
@@ -41,78 +36,6 @@ server.use(restify.bodyParser());
 // Rate limit some config, only applies when you specify
 var rateLimitStrict = restify.throttle({burst:1,rate:1,ip:true});
 var rateLimitLight = restify.throttle({burst:100,rate:50,ip:true});
-
-// SQLite3 functions
-var db = new sqlite3.cached.Database(config.Database_Location);
-
-// Functions
-function verifyUser(callback, username, password) {
-	var derivedKey = pbkdf2.pbkdf2Sync(password, salt, 1, 32, 'sha256');
-	password = derivedKey.toString('hex');
-
-	var query = db.all("select username from auth_user where username == ? and password == ?", [username, password], function (err, data) {
-		callback(data);
-	});
-
-}
-
-function verifyUsername(callback, username) {
-	db.all("select username from auth_user where username == ?", username, function (err, data) {
-		if (!data || data[0] === undefined || data[0] === null) {
-			callback(false);
-		} else {
-			callback(true);
-		}
-	})
-}
-
-function createUser(callback, username, password, email, firstname, lastname, isActive, isAdmin) {
-	// Hash password
-	var derivedKey = pbkdf2.pbkdf2Sync(password, salt, 1, 32, 'sha256');
-	password = derivedKey.toString('hex');
-
-	// TODO
-	db.run("INSERT OR IGNORE INTO auth_user (username, password, email, first_name, last_name, is_active, is_admin) VALUES (?,?,?,?,?,?,?)", [username, password, email, firstname, lastname, isActive, isAdmin], function (err, data) {
-		if (err) {
-			console.log(err);
-			callback(false);
-		} else {
-			callback(true);
-		}
-	});
-}
-
-function getPosts(callback, offset) {
-	if (offset === undefined) {
-		offset = 0;
-	}
-
-	db.all("select id,post_title,post_short,post_date from blog_status limit 5 offset " + offset, function (err, rows) {
-		callback(rows);
-	})
-};
-
-function getArticle(callback, id) {
-	db.all("select * from blog_status where id == " + id, function (err, rows) {
-		callback(rows);
-	})
-};
-
-function getAlerts(callback) {
-	//This function is for getting any alerts that should be posted to the page
-	db.all("select * from alerts limit 1", function (err, rows) {
-		if (err) {
-			callback(undefined);
-			return;
-		}
-		callback(rows);
-	})
-}
-
-function createArticle(callback, title, text, date )
-{
-
-}
 
 
 // APIs
@@ -144,7 +67,7 @@ server.get(/api\/articles\/(\d+)/, function (req, res, next) {
 	}
 
 
-	getPosts(function (posts) {
+	Backend.getPosts(function (posts) {
 		if (posts === undefined || posts === null) {
 			res.send(404, {"message": "Articles not found"});
 			return;
@@ -157,7 +80,7 @@ server.get(/api\/articles\/(\d+)/, function (req, res, next) {
 
 server.get('/api/alerts', function (req, res, next) {
 
-	getAlerts(function (message) {
+	Backend.getAlerts(function (message) {
 		if (message === "" || message === undefined || message === null) {
 			res.setHeader('Content-Type', 'application/json');
 			res.send(200, {message: null});
@@ -181,7 +104,7 @@ server.post('/api/login', function (req, res, next) {
 	}
 
 	// Get the user
-	verifyUser(function (user) {
+	Backend.verifyUser(function (user) {
 		if (!user || user[0] === undefined || user[0] === null) {
 			res.send(401, "Invalid login!");
 			return;
@@ -257,10 +180,10 @@ server.post('/api/register', rateLimitStrict, function (req, res, next)
 		}
 
 		// Make sure the user doesn't exist
-		verifyUsername(function (exists) {
+		Backend.verifyUsername(function (exists) {
 			if (exists === false) {
 				// Register user
-				createUser(function (confirm) {
+				Backend.createUser(function (confirm) {
 					if (confirm) {
 						res.send(200, {"message": 'Registration succeeded.'});
 						return;
@@ -291,7 +214,7 @@ server.post('/api/register', rateLimitStrict, function (req, res, next)
 
 server.get(/api\/article\/(\d+)/, function (req, res, next) {
 	var id = req.params[0];
-	getArticle(function (post) {
+	Backend.getArticle(function (post) {
 		if (post === undefined || post === null) {
 			res.send(404, {"message": "Article not found"});
 			return;
