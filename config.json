@@ -5,5 +5,6 @@
     "JSON_Web_Token_Secret": "SECRET TOKEN STRING",
     "Server_Name": "Martino's Blog API",
     "Password_Min_Length": 7,
-    "Session_Timeout":"2h"
+    "Session_Timeout":"2h",
+    "Server_Port": 8000
 }

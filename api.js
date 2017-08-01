@@ -9,10 +9,11 @@ stateless.
 
 // Get the needed NPM packages
 var restify = require('restify'),
-	fs = require('fs');
+fs = require('fs');
 var sqlite3 = require('sqlite3');
 var jwt = require('jsonwebtoken');
-var pbkdf2 = require('pbkdf2')
+var pbkdf2 = require('pbkdf2');
+
 
 // Read in the config file
 // TODO: I need to find a better way to read this in, as a require
@@ -37,6 +38,9 @@ var server = restify.createServer({
 });
 server.use(restify.bodyParser());
 
+// Rate limit some config, only applies when you specify
+var rateLimitStrict = restify.throttle({burst:1,rate:1,ip:true});
+var rateLimitLight = restify.throttle({burst:100,rate:50,ip:true});
 
 // SQLite3 functions
 var db = new sqlite3.cached.Database(config.Database_Location);
@@ -113,7 +117,7 @@ function createArticle(callback, title, text, date )
 
 // APIs
 server.get('/api/ping', function (req, res, next) {
-	res.send(200, 'Okay');
+	res.send(200, {"message": "Okay"});
 });
 
 
@@ -121,18 +125,18 @@ server.get('/api/ping', function (req, res, next) {
 server.get(/api\/articles\/(\d+)/, function (req, res, next) {
 	if (req.params[0] > 1000) {
 		console.log("Page request bigger than limit! ");
-		res.send(404, "Can\'t find what you\'re looking for!");
+		res.send(404, {"message": "Can\'t find what you\'re looking for!"});
 	}
 
 	try {
 		var offset = parseInt(req.params[0]);
 	} catch (e) {
 		console.log("Error parsing offset!");
-		res.send(404, "I can\'t seem to read your offset");
+		res.send(404, {"message": "I can\'t seem to read your offset"});
 	}
 
 	if (offset < 0) {
-		res.send(404, "Can\'t find what you\'re looking for!");
+		res.send(404, {"message": "Can\'t find what you\'re looking for!"});
 	} else if (offset === 1) {
 		offset = 0;
 	} else {
@@ -142,10 +146,9 @@ server.get(/api\/articles\/(\d+)/, function (req, res, next) {
 
 	getPosts(function (posts) {
 		if (posts === undefined || posts === null) {
-			res.send(404, "Articles not found");
+			res.send(404, {"message": "Articles not found"});
 			return;
 		}
-
 		res.setHeader('Content-Type', 'application/json');
 		res.send(200, posts);
 	}, offset);
@@ -155,10 +158,9 @@ server.get(/api\/articles\/(\d+)/, function (req, res, next) {
 server.get('/api/alerts', function (req, res, next) {
 
 	getAlerts(function (message) {
-		console.log("Message: " + message);
 		if (message === "" || message === undefined || message === null) {
 			res.setHeader('Content-Type', 'application/json');
-			res.send(200, '{message: null}');
+			res.send(200, {message: null});
 			return;
 		} else {
 			res.setHeader('Content-Type', 'application/json');
@@ -214,7 +216,8 @@ server.post('/api/login', function (req, res, next) {
 
 });
 
-server.post('/api/register', function (req, res, next) {
+server.post('/api/register', rateLimitStrict, function (req, res, next) 
+{
 	//First make sure the username doesn't exist and then make the user
 	// Make sure needed information is provided
 
@@ -231,22 +234,25 @@ server.post('/api/register', function (req, res, next) {
 	// Check null || empty
 	if (userRegistrationData.FirstName === undefined || userRegistrationData.LastName === undefined ||
 		userRegistrationData.Email === undefined || userRegistrationData.Username === undefined ||
-		userRegistrationData.Password === undefined) {
-		res.send(403, 'Invalid data, make sure all data is provided.');
-		return;
-	} else {
+		userRegistrationData.Password === undefined) 
+	{
+		res.send(403, {"message": 'Invalid data, make sure all data is provided.'});
+	return;
+	} 
+	else 
+	{
 		// Verify email format
 		var reg = /^([A-Za-z0-9_\-\.])+\@([A-Za-z0-9_\-\.])+\.([A-Za-z]{2,4})$/;
 
 		if (reg.test(userRegistrationData.Email) == false) {
-			res.send(403, 'Invalid email format!');
+			res.send(403, {"message": 'Invalid email format!'});
 			return;
 
 		}
 
 		// Make sure password is at least 
 		if (userRegistrationData.Password === undefined || userRegistrationData.Password.length < config.Password_Min_Length) {
-			res.send(403, 'Password does not meet the min complexity');
+			res.send(403, {"message": 'Password does not meet the min complexity'});
 			return;
 		}
 
@@ -255,24 +261,24 @@ server.post('/api/register', function (req, res, next) {
 			if (exists === false) {
 				// Register user
 				createUser(function (confirm) {
-						if (confirm) {
-							res.send(200, 'Registration succeeded.');
-							return;
+					if (confirm) {
+						res.send(200, {"message": 'Registration succeeded.'});
+						return;
 
-						} else {
-							res.send(403, 'Registration failed.');
-							return;
+					} else {
+						res.send(403, {"message": 'Registration failed.'});
+						return;
 
-						}
-					}, userRegistrationData.Username,
-					userRegistrationData.Password,
-					userRegistrationData.Email,
-					userRegistrationData.FirstName,
-					userRegistrationData.LastName,
-					userRegistrationData.isActive,
-					userRegistrationData.isAdmin)
+					}
+				}, userRegistrationData.Username,
+				userRegistrationData.Password,
+				userRegistrationData.Email,
+				userRegistrationData.FirstName,
+				userRegistrationData.LastName,
+				userRegistrationData.isActive,
+				userRegistrationData.isAdmin)
 			} else {
-				res.send(403, 'Username already exists.');
+				res.send(403, {"message": 'Username already exists.'});
 				return;
 			}
 		}, userRegistrationData.Username)
@@ -280,16 +286,14 @@ server.post('/api/register', function (req, res, next) {
 
 	}
 
-	// Make sure email was provided
-
-
+		// Make sure email was provided
 });
 
 server.get(/api\/article\/(\d+)/, function (req, res, next) {
 	var id = req.params[0];
 	getArticle(function (post) {
 		if (post === undefined || post === null) {
-			res.send(404, "Article not found");
+			res.send(404, {"message": "Article not found"});
 			return;
 		}
 
@@ -301,7 +305,7 @@ server.get(/api\/article\/(\d+)/, function (req, res, next) {
 
 /*
 	This section is for authenticated requests ONLY! Always check for tokens!
-*/
+	*/
 server.post('/api/article/post', function (req, res, next) {
 	// UNDER DEVELOPMENT
 	// This function is for posting articles, NOT updating
@@ -362,8 +366,6 @@ server.post('/api/article/post', function (req, res, next) {
 
 	}
 
-
-
 });
 
 server.post('/api/article/update', function (req, res, next) {
@@ -403,7 +405,7 @@ server.post('/api/article/update', function (req, res, next) {
 				// Check requirements
 				if (post.post_title === undefined || post.post_date === undefined) {
 					console.log('Error making post!', post);
-					res.send(400, "I was not able to make a post with the data provided!");
+					res.send(400, {"message": "I was not able to make a post with the data provided!"});
 					return;
 				}
 
@@ -411,7 +413,7 @@ server.post('/api/article/update', function (req, res, next) {
 
 
 				// Do this when done
-				res.send(200, "Posted");
+				res.send(200, {"message": "Posted"});
 			}
 		});
 
@@ -428,5 +430,14 @@ server.post('/api/article/update', function (req, res, next) {
 
 });
 
-server.listen(8080);
-console.log("Server started for " + config.Server_Name);
+server.post('/api/upload', function(req, res, next)
+	{
+	console.log(arguments.formatters); // no files in any request properties
+	req.on('file', function() { // "end" doesn't work either, callback never called
+		console.log(arguments);
+	});
+
+});
+
+server.listen(config.Server_Port);
+console.log("Server started for %s on port %s", config.Server_Name, config.Server_Port);
