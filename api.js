@@ -20,7 +20,8 @@ var Backend = new ApiBackend();
 // Read in the config file
 // TODO: I need to find a better way to read this in, as a require
 var config = JSON.parse(fs.readFileSync('./config.json', 'utf-8'));
-if (!config) {
+if (!config) 
+{
 	console.log('Error reading in config file!')
 	process.exit();
 }
@@ -312,7 +313,7 @@ server.get(/api\/article\/(\d+)/, function (req, res, next)
 	var id = req.params[0];
 	Backend.getArticle(function (post) 
 	{
-		if (!post[0]) 
+		if (!post || !post[0]) 
 		{
 			res.send(200, {success: false, message: "Article not found"});
 			return;
