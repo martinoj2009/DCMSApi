@@ -115,7 +115,6 @@ server.get(/api\/articles\/(\d+)/, function (req, res, next)
 			return;
 		}
 
-		post.success = true;
 		res.setHeader('Content-Type', 'application/json');
 		res.send(200, posts);
 	}, offset);
