@@ -463,6 +463,75 @@ server.post('/api/article/post', function (req, res, next)
 	}
 	
 });
+
+server.post('/api/article/delete', function(req, res, next)
+{
+	// Make sure they have a valid token
+	var token = req.headers['x-access-token'];
+	
+	// decode token
+	if (token) 
+	{
+		// verifies secret and checks exp
+		jwt.verify(token, secret, function (err, decoded) 
+		{
+			if (err) 
+			{
+				return res.json({
+					success: false,
+					message: 'Failed to authenticate token.'
+				});
+			} 
+			else 
+			{
+				// if everything is good, save to request for use in other routes
+				req.decoded = decoded;
+				if (!req.body) 
+				{
+					res.send(200, {success: false, message: "Invalid post format!"});
+					console.log(req.body);
+					return;
+				}
+
+				// Make sure this is an admin
+				if(!decoded.isAdmin)
+				{
+					res.send(200, {success: false, message: "Must be an admin"});
+					console.log("You must be an admin to post articles: ", decoded);
+					return;
+				}
+
+				// Make the post
+				var post = {};
+				post.id = req.body.post_id;
+				Backend.deleteArticle(function(status)
+				{
+					if(status)
+					{
+						res.send(200, {success: true, message: "Post deleted."});
+						return;
+					}
+					else
+					{
+						res.send(200, {success: false, message: "Could not delete post."});
+						return;
+					}
+				}, post)
+				
+			}
+		});
+	} 
+	else 
+	{
+		// if there is no token
+		// return an error
+		return res.send(200, {
+			success: false,
+			message: 'No token provided.'
+		});
+		
+	}
+});
 	
 server.post('/api/article/update', function (req, res, next) 
 {	

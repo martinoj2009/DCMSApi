@@ -102,6 +102,26 @@ Backend.prototype.getArticle = function(callback, id)
   });
 };
 
+Backend.prototype.deleteArticle = function(callback, post) 
+{
+  //FIX!!
+  db.all(`DELETE FROM blog_post
+          WHERE id=?`,[post.id], function (err, rows) 
+  {
+    if(err)
+    {
+      console.log("There was an error deleting the post ", post);
+      console.log(err)
+      callback(false);
+      return;
+    }
+    else
+    {
+      callback(true);
+    }
+  });
+};
+
 Backend.prototype.getAlerts = function(callback) 
 {
   //This function is for getting any alerts that should be posted to the page
@@ -134,6 +154,8 @@ Backend.prototype.createArticle = function(callback, post)
     callback(result);
   });
 }
+
+
 
 Backend.prototype.setAlert = function(callback, alert)
 {
