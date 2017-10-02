@@ -40,7 +40,13 @@ Backend.prototype.verifyUser = function(callback, username, password) {
   var derivedKey = pbkdf2.pbkdf2Sync(password, salt, 1, 32, 'sha256');
   password = derivedKey.toString('hex');
 
-  var query = db.all("select username from auth_user where username == ? and password == ?", [username, password], function (err, data) {
+  var query = db.all("select username, first_name, last_name, is_admin from auth_user where username == ? and password == ?", [username, password], function (err, data) 
+  {
+    if(err)
+    {
+      console.log("Error logging in ", username);
+      console.log(err);
+    }
     callback(data);
   });
 }
@@ -112,7 +118,7 @@ Backend.prototype.getAlerts = function(callback)
 
 Backend.prototype.createArticle = function(callback, post)
 {
-  db.run("INSERT OR IGNORE INTO blog_post (text, short, title, image, status, date) VALUES (?,?,?,?,?,?)", [post.text, post.short, post.title, post.image, post.status, post.date], 
+  db.run("INSERT OR IGNORE INTO blog_post (text, short, title, image, status, date, author) VALUES (?,?,?,?,?,?, ?)", [post.text, post.short, post.title, post.image, post.status, post.date, post.author], 
   function(err, data)
   {
     var result;

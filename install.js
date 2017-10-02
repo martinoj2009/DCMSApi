@@ -65,6 +65,12 @@ function buildConfig() {
         configFile.Server_Name = 'My Blog';
     }
 
+    // Server port
+    if(!configFile.Server_Port)
+    {
+        configFile.Server_Port = '8000';
+    }
+
     let content = JSON.stringify(configFile);
     // Write to file
     fs.writeFile('./config.json', content, 'utf8',function(err, data)

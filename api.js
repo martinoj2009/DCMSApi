@@ -38,9 +38,9 @@ server.use(restify.bodyParser());
 
 // Rate limit some config, only applies when you specify
 // Global ratelimit
-server.use(restify.throttle({burst:100,rate:50,ip:true});
-//var rateLimitStrict = restify.throttle({burst:1,rate:1,ip:true});
-//var rateLimitLight = restify.throttle({burst:100,rate:50,ip:true});
+server.use(restify.throttle({burst:100,rate:50,ip:true}));
+var rateLimitStrict = restify.throttle({burst:1,rate:1,ip:true});
+var rateLimitLight = restify.throttle({burst:100,rate:50,ip:true});
 
 
 // APIs
@@ -54,21 +54,21 @@ server.get('/api/ping', function (req, res, next)
 		{
 			if (err) 
 			{
-				res.send(200, {status: "OKAY", message: "Logged out"});
+				res.send(200, {status: "OKAY", loggedIn: false});
 				return;
 			} 
 			else 
 			{
 				// Ping with username
 				req.decoded = decoded;
-				res.send(200, {status: "OKAY", message: "Logged in", user: decoded.user});
+				res.send(200, {status: "OKAY", loggedIn: true, user: decoded.user});
 				return;
 			}
 		});
 	}
 	else
 	{
-		res.send(200, {status: "OKAY", message: "Logged out"});
+		res.send(200, {status: "OKAY", loggedIn: false});
 		return;
 	}
 
@@ -212,9 +212,15 @@ server.post('/api/login', function (req, res, next)
 		}
 		
 		// Valid user!
-		console.log("User logged in: " + user[0].username);
+		let userObject = {
+			user: user[0].username,
+			isAdmin: user[0].is_admin,
+			firstname: user[0].first_name,
+			lastname: user[0].last_name
+		}
+		console.log("User logged in: ", userObject);
 		
-		jwt.sign({user: user[0].username}, secret, { expiresIn: config.Session_Timeout }, function (err, token) 
+		jwt.sign(userObject, secret, { expiresIn: config.Session_Timeout }, function (err, token) 
 		{
 			if (err) 
 			{
@@ -240,7 +246,7 @@ server.post('/api/login', function (req, res, next)
 	
 });
 
-server.post('/api/register', rateLimitStrict, function (req, res, next) 
+server.post('/api/register', function (req, res, next) 
 {
 	//First make sure the username doesn't exist and then make the user
 	// Make sure needed information is provided
@@ -260,8 +266,9 @@ server.post('/api/register', rateLimitStrict, function (req, res, next)
 		!userRegistrationData.email || !userRegistrationData.username ||
 		!userRegistrationData.password) 
 	{
-			res.send(200, {success: false, message: 'Invalid data, make sure all data is provided.'});
-			return;
+		console.log("INVALID: %o", userRegistrationData);
+		res.send(200, {success: false, message: 'Invalid data, make sure all data is provided.'});
+		return;
 	} 
 	else 
 	{
@@ -279,6 +286,8 @@ server.post('/api/register', rateLimitStrict, function (req, res, next)
 			res.send(200, {success: false, message: 'Password does not meet the min complexity'});
 			return;
 		}
+
+		console.log("Registering: " + userRegistrationData.username);
 		
 		// Make sure the user doesn't exist
 		Backend.verifyUsername(function (exists) 
@@ -338,20 +347,20 @@ server.post('/api/article/post', function (req, res, next)
 	
 	// decode token
 	if (token) 
-		{
+	{
 		
 		// verifies secret and checks exp
 		jwt.verify(token, secret, function (err, decoded) 
 		{
 			if (err) 
-				{
+			{
 				return res.json({
 					success: false,
 					message: 'Failed to authenticate token.'
 				});
 			} 
 			else 
-				{
+			{
 				// if everything is good, save to request for use in other routes
 				req.decoded = decoded;
 				if (!req.body) 
@@ -360,7 +369,15 @@ server.post('/api/article/post', function (req, res, next)
 					console.log(req.body);
 					return;
 				}
-				
+
+				// Make sure this is an admin
+				if(!decoded.isAdmin)
+				{
+					res.send(200, {success: false, message: "Must be an admin"});
+					console.log("You must be an admin to post articles: ", decoded);
+					return;
+				}
+
 				// Make the post
 				var post = {};
 				post.title = req.body.post_title;
@@ -369,6 +386,15 @@ server.post('/api/article/post', function (req, res, next)
 				post.image = req.body.post_image;
 				post.short = req.body.post_short;
 				post.status = req.body.post_status;
+				post.author = decoded.user;
+
+				console.log("Creating post: " + post.title);
+
+				// Make sure status is set, default to 1 for published
+				if(!post.status)
+				{
+					post.status = 1;
+				}
 				
 				// Check requirements
 				if (!post.title || !post.date) 
