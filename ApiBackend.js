@@ -303,6 +303,7 @@ Backend.prototype.updateAccountInformation = function(callback, user)
           });
 }
 
+// WARNING: THIS HAS NOT BEEN TESTED!
 Backend.prototype.deleteAccount = function(callback, user)
 {
   db.all("select username from auth_user where username == ? and password == ?", [user.username, user.password], function(data)
