@@ -221,20 +221,20 @@ server.post('/api/register', rateLimitStrict, function (req, res, next)
 					{
 						if (confirm) 
 							{
-							res.send(200, {"message": 'Registration succeeded.'});
+							res.send(200, {success: true, message: 'Registration succeeded.'});
 							return;
 							
 						} 
 						else 
 							{
-							res.send(403, {"message": 'Registration failed.'});
+							res.send(200, {success: false, message: 'Registration failed.'});
 							return;
 						}
 					}, userRegistrationData)
 				} 
 				else 
 					{
-					res.send(403, {"message": 'Username already exists.'});
+					res.send(200, {success: false, message: 'Username already exists.'});
 					return;
 				}
 			}, userRegistrationData.username)
@@ -244,12 +244,14 @@ server.post('/api/register', rateLimitStrict, function (req, res, next)
 	server.get(/api\/article\/(\d+)/, function (req, res, next) 
 	{
 		var id = req.params[0];
-		Backend.getArticle(function (post) {
-			if (post === undefined || post === null) {
-				res.send(404, {"message": "Article not found"});
+		Backend.getArticle(function (post) 
+		{
+			if (post === undefined || post === null) 
+			{
+				res.send(200, {success: false, message: "Article not found"});
 				return;
 			}
-			
+			post.success = true;
 			res.setHeader('Content-Type', 'application/json');
 			res.send(200, post)
 		}, id);
@@ -285,8 +287,8 @@ server.post('/api/register', rateLimitStrict, function (req, res, next)
 					// if everything is good, save to request for use in other routes
 					req.decoded = decoded;
 					if (!req.body) 
-						{
-						res.send(400, "Invalid post format!");
+					{
+						res.send(200, {success: false, message: "Invalid post format!"});
 						console.log(req.body);
 						return;
 					}
@@ -363,7 +365,7 @@ server.post('/api/register', rateLimitStrict, function (req, res, next)
 					req.decoded = decoded;
 					if (!req.body) 
 						{
-						res.send(400, "Invalid post format!");
+						res.send(200, {success: false, message: "Invalid post format!"});
 						console.log(req.body);
 						return;
 					}
@@ -416,6 +418,8 @@ server.post('/api/register', rateLimitStrict, function (req, res, next)
 	
 	server.post('/api/upload', function(req, res, next)
 	{
+		res.send(200, {success: false, message: "Feature not ready."});
+		return;
 		console.log(arguments.formatters); // no files in any request properties
 		req.on('file', function() { // "end" doesn't work either, callback never called
 		console.log(arguments);
