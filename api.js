@@ -37,8 +37,10 @@ var server = restify.createServer({
 server.use(restify.bodyParser());
 
 // Rate limit some config, only applies when you specify
-var rateLimitStrict = restify.throttle({burst:1,rate:1,ip:true});
-var rateLimitLight = restify.throttle({burst:100,rate:50,ip:true});
+// Global ratelimit
+server.use(restify.throttle({burst:100,rate:50,ip:true});
+//var rateLimitStrict = restify.throttle({burst:1,rate:1,ip:true});
+//var rateLimitLight = restify.throttle({burst:100,rate:50,ip:true});
 
 
 // APIs

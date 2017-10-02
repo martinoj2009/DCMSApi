@@ -37,9 +37,10 @@ function buildConfig() {
     }
     catch(e)
     {
-        console.log('There was an error parsing the config file\n\n');
-        console.log(e);
-        process.exit();
+        console.log('Config file invalid format, starting from scratch...\n\n');
+        //console.log(e);
+        //process.exit();
+        configFile = {};
     }
 
     console.log('Starting to build the config file');
@@ -64,9 +65,23 @@ function buildConfig() {
         configFile.Server_Name = 'My Blog';
     }
 
-    // Building done
-    console.log('Done building config file!');
-    console.log(configFile);
-    process.exit();
+    let content = JSON.stringify(configFile);
+    // Write to file
+    fs.writeFile('./config.json', content, 'utf8',function(err, data)
+        {
+            if(err)
+            {
+                console.error('Error writing to file!');
+                console.error(err);
+                process.exit();
+            }
+            else
+            {
+                // Building done
+                console.log('Done building config file!');
+                console.log(configFile);
+                process.exit();
+            }
+        });
 
 }
