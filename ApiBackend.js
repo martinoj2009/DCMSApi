@@ -142,12 +142,9 @@ Backend.prototype.updateArticle = function(callback, post)
     {
       if(post[keys[i]])
       {
-        console.log("UPDATE: " + post[keys[i]] + " to " + update[keys[i]]);
         update[keys[i]] = post[keys[i]];
       }
     }
-
-    console.log("New %o", update);
 
     db.run(`UPDATE blog_post
           SET text=?, short=?, title=?, image=?, status=?, date=?
@@ -168,11 +165,6 @@ Backend.prototype.updateArticle = function(callback, post)
     });
   });
   
-}
-
-Backend.prototype.verifyToken = function(callback, token)
-{
-
 }
 
     // export the class

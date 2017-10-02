@@ -41,8 +41,34 @@ var rateLimitLight = restify.throttle({burst:100,rate:50,ip:true});
 
 
 // APIs
-server.get('/api/ping', function (req, res, next) {
-	res.send(200, {"message": "Okay"});
+server.get('/api/ping', function (req, res, next) 
+{
+	var token = req.headers['x-access-token'];
+	if (token) 
+	{
+		// verifies secret and checks exp
+		jwt.verify(token, secret, function (err, decoded) 
+		{
+			if (err) 
+			{
+				res.send(200, {status: "OKAY", message: "Logged out"});
+				return;
+			} 
+			else 
+			{
+				// Ping with username
+				req.decoded = decoded;
+				res.send(200, {status: "OKAY", message: "Logged in", user: decoded.user});
+				return;
+			}
+		});
+	}
+	else
+	{
+		res.send(200, {status: "OKAY", message: "Logged out"});
+		return;
+	}
+	
 });
 
 
@@ -121,15 +147,19 @@ server.post('/api/login', function (req, res, next)
 		// Valid user!
 		console.log("User logged in: " + user[0].username);
 		
-		jwt.sign({user: username}, secret, { expiresIn: config.Session_Timeout }, function (err, token) {
-			if (err) {
+		jwt.sign({user: user[0].username}, secret, { expiresIn: config.Session_Timeout }, function (err, token) 
+		{
+			if (err) 
+			{
 				console.log(err);
 				res.json({
 					success: false,
 					message: 'Failed to sign web token'
-				})
+				});
 				return;
-			} else {
+			} 
+			else 
+			{
 				res.json({
 					success: true,
 					message: 'Enjoy your token!',
