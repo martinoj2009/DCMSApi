@@ -135,23 +135,35 @@ Backend.prototype.createArticle = function(callback, post)
   });
 }
 
-Backend.prototype.setAlert = function(callback, post)
+Backend.prototype.setAlert = function(callback, alert)
 {
-  db.run("INSERT OR IGNORE INTO alerts (title, message) VALUES (?,?)", [post.title, post.message], 
-  function(err, data)
+  // Clear the table and set the new alert, this is bad. Will do better way later ;-)
+  db.run("DELETE FROM alerts", function(err, data)
   {
-    var result;
     if(err)
     {
+      console.log("Error clearing alerts!");
       console.log(err);
-      result = false;
+      callback(false);
+      return;
     }
-    else
+    db.run("INSERT OR IGNORE INTO alerts (title, message) VALUES (?,?)", [alert.title, alert.message], 
+    function(err, data)
     {
-      result = true;
-    }
-    callback(result);
+      var result;
+      if(err)
+      {
+        console.log(err);
+        result = false;
+      }
+      else
+      {
+        result = true;
+      }
+      callback(result);
+    });
   });
+  
 }
 
 Backend.prototype.updateArticle = function(callback, post)

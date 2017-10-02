@@ -54,21 +54,21 @@ server.get('/api/ping', function (req, res, next)
 		{
 			if (err) 
 			{
-				res.send(200, {status: "OKAY", loggedIn: false});
+				res.send(200, {success: true, loggedIn: false});
 				return;
 			} 
 			else 
 			{
 				// Ping with username
 				req.decoded = decoded;
-				res.send(200, {status: "OKAY", loggedIn: true, user: decoded.user});
+				res.send(200, {success: true, loggedIn: true, user: decoded.user});
 				return;
 			}
 		});
 	}
 	else
 	{
-		res.send(200, {status: "OKAY", loggedIn: false});
+		res.send(200, {success: true, loggedIn: false});
 		return;
 	}
 
@@ -123,7 +123,7 @@ server.get(/api\/articles\/(\d+)/, function (req, res, next)
 
 });
 
-server.get('/api/alerts', function (req, res, next) 
+server.get('/api/alert', function (req, res, next) 
 {
 	Backend.getAlerts(function (message) 
 	{
@@ -136,15 +136,15 @@ server.get('/api/alerts', function (req, res, next)
 		else 
 		{
 			res.setHeader('Content-Type', 'application/json');
-			message.success = true;
-			res.send(200, message);
+			message[0].success = true;
+			res.send(200, message[0]);
 			return;
 		}
 	});
 	
 });
 
-server.post('/api/alerts', function(req, res, next)
+server.post('/api/alert/update', function(req, res, next)
 {
 	// Make sure they have a valid token
 	var token = req.headers['x-access-token'];
@@ -166,16 +166,47 @@ server.post('/api/alerts', function(req, res, next)
 			{
 				// if everything is good, save to request for use in other routes
 				req.decoded = decoded;
+
+				// Make sure this is an admin
+				if(!decoded.isAdmin)
+				{
+					res.send(200, {success: false, message: "Must be an admin"});
+					console.log("You must be an admin to post articles: ", decoded);
+					return;
+				}
+
 				if (!req.body) 
 				{
-					res.send(200, {success: false, message: "Invalid post format!"});
+					res.send(200, {success: false, message: "Please provide alert_title and alert_message in body."});
 					console.log(req.body);
 					return;
-				}	
-				
-				// Let them update the alerts
-				res.send(200, {success: false, message: "Feature not done yet."});
-				return;
+				}
+
+				let newAlert = {}
+				newAlert.title = req.body.alert_title;
+				newAlert.message = req.body.alert_message;
+
+				// Make sure they provided data
+				if(!newAlert.title || !newAlert.message)
+				{
+					res.send(200, {success: false, message: "Please provide alert_title and alert_message in body."});
+					return;
+				}
+
+				console.log(newAlert);
+
+				Backend.setAlert(function(status)
+				{
+					if(status)
+					{
+						res.send(200, {success: true, message: "Alert set"});
+						return;
+					}
+					else
+					{
+						res.send(200, {success: false, message: "Alert not set"});
+					}
+				}, newAlert);
 			}
 		});
 	} 
@@ -421,7 +452,7 @@ server.post('/api/article/post', function (req, res, next)
 		});
 	} 
 	else 
-		{
+	{
 		// if there is no token
 		// return an error
 		return res.send(200, {
@@ -459,6 +490,14 @@ server.post('/api/article/update', function (req, res, next)
 				{
 					res.send(200, {success: false, message: "Invalid post format!"});
 					console.log(req.body);
+					return;
+				}
+
+				// Make sure this is an admin
+				if(!decoded.isAdmin)
+				{
+					res.send(200, {success: false, message: "Must be an admin"});
+					console.log("You must be an admin to post articles: ", decoded);
 					return;
 				}
 				
