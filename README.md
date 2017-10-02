@@ -16,4 +16,36 @@ The server needs a config.json to configure the API on startup. You need to make
 "Password_Min_Length": 7
 }
 
+# Current Features:
 
+##Core:
+*Rate Limit
+*Ping (returns status and if logged in or not)
+*SQlite3 backed
+*JSON Web Token authentication
+*Password hashing (SHA256) + SALT
+*REST+JSON communication
+*Installer/Reset for config and database
+*Random 64 character secret+salt per installation
+*Configurable config file
+
+##Articles:
+*Get paginated list of articles
+*Get a specific article
+*Post article
+*Update article
+*Delete article
+
+##Account Managment:
+*Register
+*Login
+*Update certain account information (name, email, password)
+*Delete account
+*Logout
+
+##Alerts
+*Get alert
+*Set alert
+
+##Additional:
+*Docker image
