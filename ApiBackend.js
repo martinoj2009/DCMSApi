@@ -129,6 +129,25 @@ Backend.prototype.createArticle = function(callback, post)
   });
 }
 
+Backend.prototype.setAlert = function(callback, post)
+{
+  db.run("INSERT OR IGNORE INTO alerts (title, message) VALUES (?,?)", [post.title, post.message], 
+  function(err, data)
+  {
+    var result;
+    if(err)
+    {
+      console.log(err);
+      result = false;
+    }
+    else
+    {
+      result = true;
+    }
+    callback(result);
+  });
+}
+
 Backend.prototype.updateArticle = function(callback, post)
 {
   //FIX!!
