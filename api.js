@@ -11,6 +11,8 @@ stateless.
 var restify = require('restify'),
 fs = require('fs');
 var jwt = require('jsonwebtoken');
+
+// Custom code
 var ApiBackend = require('./ApiBackend.js');
 var Backend = new ApiBackend();
 
@@ -49,15 +51,16 @@ server.get(/api\/articles\/(\d+)/, function (req, res, next) {
 	if (req.params[0] > 1000) {
 		console.log("Page request bigger than limit! ");
 		res.send(404, {"message": "Can\'t find what you\'re looking for!"});
+		return;
 	}
-
+	
 	try {
 		var offset = parseInt(req.params[0]);
 	} catch (e) {
 		console.log("Error parsing offset!");
 		res.send(404, {"message": "I can\'t seem to read your offset"});
 	}
-
+	
 	if (offset < 0) {
 		res.send(404, {"message": "Can\'t find what you\'re looking for!"});
 	} else if (offset === 1) {
@@ -65,8 +68,8 @@ server.get(/api\/articles\/(\d+)/, function (req, res, next) {
 	} else {
 		offset = offset * 5 - 5;
 	}
-
-
+	
+	
 	Backend.getPosts(function (posts) {
 		if (posts === undefined || posts === null) {
 			res.send(404, {"message": "Articles not found"});
@@ -75,11 +78,11 @@ server.get(/api\/articles\/(\d+)/, function (req, res, next) {
 		res.setHeader('Content-Type', 'application/json');
 		res.send(200, posts);
 	}, offset);
-
+	
 });
 
 server.get('/api/alerts', function (req, res, next) {
-
+	
 	Backend.getAlerts(function (message) {
 		if (message === "" || message === undefined || message === null) {
 			res.setHeader('Content-Type', 'application/json');
@@ -91,28 +94,33 @@ server.get('/api/alerts', function (req, res, next) {
 			return;
 		}
 	});
-
+	
 });
 
 // Authentication and registration
-server.post('/api/login', function (req, res, next) {
+server.post('/api/login', function (req, res, next) 
+{
 	var username = req.headers.username;
 	var password = req.headers.password;
-	if (!username || !password) {
-		res.send(401, "Invalid login!");
+	
+	if (!username || !password) 
+		{
+		res.send(401, {success: false, message: "Invalid login!"});
 		return;
 	}
-
+	
 	// Get the user
-	Backend.verifyUser(function (user) {
-		if (!user || user[0] === undefined || user[0] === null) {
-			res.send(401, "Invalid login!");
+	Backend.verifyUser(function (user) 
+	{
+		if (!user || !user[0]) 
+			{
+			res.send(401, {success: false, message: "Invalid login!"});
 			return;
 		}
-
+		
 		// Valid user!
 		console.log("User logged in: " + user[0].username);
-
+		
 		jwt.sign({user: username}, secret, { expiresIn: config.Session_Timeout }, function (err, token) {
 			if (err) {
 				console.log(err);
@@ -129,237 +137,260 @@ server.post('/api/login', function (req, res, next) {
 				});
 				return;
 			}
-
+			
 		});
-
-
-
-
 	}, username, password);
-
+	
 });
 
 server.post('/api/register', rateLimitStrict, function (req, res, next) 
 {
 	//First make sure the username doesn't exist and then make the user
 	// Make sure needed information is provided
-
+	
 	var userRegistrationData = {};
-	userRegistrationData.FirstName = req.body.FirstName;
-	userRegistrationData.LastName = req.body.LastName;
-	userRegistrationData.Email = req.body.Email;
-	userRegistrationData.Username = req.body.Username;
-	userRegistrationData.Password = req.body.Password;
+	userRegistrationData.firstname = req.body.firstname;
+	userRegistrationData.lastname = req.body.lastname;
+	userRegistrationData.email = req.body.email;
+	userRegistrationData.username = req.body.username;
+	userRegistrationData.password = req.body.password;
 	userRegistrationData.isActive = true;
 	userRegistrationData.isAdmin = false;
-
+	
 	// Verify provided information
 	// Check null || empty
-	if (userRegistrationData.FirstName === undefined || userRegistrationData.LastName === undefined ||
-		userRegistrationData.Email === undefined || userRegistrationData.Username === undefined ||
-		userRegistrationData.Password === undefined) 
-	{
-		res.send(403, {"message": 'Invalid data, make sure all data is provided.'});
-	return;
-	} 
-	else 
-	{
-		// Verify email format
-		var reg = /^([A-Za-z0-9_\-\.])+\@([A-Za-z0-9_\-\.])+\.([A-Za-z]{2,4})$/;
-
-		if (reg.test(userRegistrationData.Email) == false) {
-			res.send(403, {"message": 'Invalid email format!'});
+	if (!userRegistrationData.firstname || !userRegistrationData.lastname ||
+		!userRegistrationData.email || !userRegistrationData.username ||
+		!userRegistrationData.password) 
+		{
+			res.send(403, {"message": 'Invalid data, make sure all data is provided.'});
 			return;
-
-		}
-
-		// Make sure password is at least 
-		if (userRegistrationData.Password === undefined || userRegistrationData.Password.length < config.Password_Min_Length) {
-			res.send(403, {"message": 'Password does not meet the min complexity'});
-			return;
-		}
-
-		// Make sure the user doesn't exist
-		Backend.verifyUsername(function (exists) {
-			if (exists === false) {
-				// Register user
-				Backend.createUser(function (confirm) {
-					if (confirm) {
-						res.send(200, {"message": 'Registration succeeded.'});
-						return;
-
-					} else {
-						res.send(403, {"message": 'Registration failed.'});
-						return;
-
-					}
-				}, userRegistrationData.Username,
-				userRegistrationData.Password,
-				userRegistrationData.Email,
-				userRegistrationData.FirstName,
-				userRegistrationData.LastName,
-				userRegistrationData.isActive,
-				userRegistrationData.isAdmin)
-			} else {
-				res.send(403, {"message": 'Username already exists.'});
+		} 
+		else 
+			{
+			// Verify email format
+			var reg = /^([A-Za-z0-9_\-\.])+\@([A-Za-z0-9_\-\.])+\.([A-Za-z]{2,4})$/;
+			if (reg.test(userRegistrationData.email) == false) {
+				res.send(403, {"message": 'Invalid email format!'});
 				return;
 			}
-		}, userRegistrationData.Username)
-
-
-	}
-
-		// Make sure email was provided
-});
-
-server.get(/api\/article\/(\d+)/, function (req, res, next) {
-	var id = req.params[0];
-	Backend.getArticle(function (post) {
-		if (post === undefined || post === null) {
-			res.send(404, {"message": "Article not found"});
-			return;
+			
+			// Make sure password is at least Password_Min_Length
+			if (userRegistrationData.password === undefined || userRegistrationData.password.length < config.Password_Min_Length) {
+				res.send(403, {"message": 'Password does not meet the min complexity'});
+				return;
+			}
+			
+			// Make sure the user doesn't exist
+			Backend.verifyUsername(function (exists) 
+			{
+				if (exists === false) 
+					{
+					// Register user
+					Backend.createUser(function (confirm) 
+					{
+						if (confirm) 
+							{
+							res.send(200, {"message": 'Registration succeeded.'});
+							return;
+							
+						} 
+						else 
+							{
+							res.send(403, {"message": 'Registration failed.'});
+							return;
+						}
+					}, userRegistrationData)
+				} 
+				else 
+					{
+					res.send(403, {"message": 'Username already exists.'});
+					return;
+				}
+			}, userRegistrationData.username)
 		}
-
-		res.setHeader('Content-Type', 'application/json');
-		res.send(200, post)
-	}, id);
-
-});
-
-/*
+	});
+	
+	server.get(/api\/article\/(\d+)/, function (req, res, next) 
+	{
+		var id = req.params[0];
+		Backend.getArticle(function (post) {
+			if (post === undefined || post === null) {
+				res.send(404, {"message": "Article not found"});
+				return;
+			}
+			
+			res.setHeader('Content-Type', 'application/json');
+			res.send(200, post)
+		}, id);
+	});
+	
+	/*
 	This section is for authenticated requests ONLY! Always check for tokens!
 	*/
-server.post('/api/article/post', function (req, res, next) {
-	// UNDER DEVELOPMENT
-	// This function is for posting articles, NOT updating
-
-	// Make sure they have a valid token
-	var token = req.headers['x-access-token'];
-
-	// decode token
-	if (token) {
-
-		// verifies secret and checks exp
-		jwt.verify(token, secret, function (err, decoded) {
-			if (err) {
-				return res.json({
-					success: false,
-					message: 'Failed to authenticate token.'
-				});
-			} else {
-				// if everything is good, save to request for use in other routes
-				req.decoded = decoded;
-				if (!req.body) {
-					res.send(400, "Invalid post format!");
-					console.log(req.body);
-					return;
-				}
-
-				// Make the post
-				var post = {};
-				post.post_title = req.body.post_title;
-				post.post_date = new Date(); // We need to do something about the date time, they will want to set the timezone!
-				post.post_text = req.body.post_text;
-				post.post_image = req.body.post_image;
-				post.post_short = req.body.post_short;
-
-				// Check requirements
-				if (post.post_title === undefined || post.post_date === undefined) {
-					console.log('Error making post!', post);
-					res.send(400, "I was not able to make a post with the data provided!");
-					return;
-				}
-
-				console.log(post);
-
-
-				// Do this when done
-				res.send(200, "Posted");
-			}
-		});
-
-	} else {
-
-		// if there is no token
-		// return an error
-		return res.status(403).send({
-			success: false,
-			message: 'No token provided.'
-		});
-
-	}
-
-});
-
-server.post('/api/article/update', function (req, res, next) {
-	// UNDER DEVELOPMENT
-	// This function is for posting articles, NOT updating
-
-	// Make sure they have a valid token
-	var token = req.body.token || req.query.token || req.headers['x-access-token'];
-
-	// decode token
-	if (token) {
-
-		// verifies secret and checks exp
-		jwt.verify(token, secret, function (err, decoded) {
-			if (err) {
-				return res.json({
-					success: false,
-					message: 'Failed to authenticate token.'
-				});
-			} else {
-				// if everything is good, save to request for use in other routes
-				req.decoded = decoded;
-				if (!req.body) {
-					res.send(400, "Invalid post format!");
-					console.log(req.body);
-					return;
-				}
-
-				// Make the post
-				var post = {};
-				post.post_title = req.body.post_title;
-				post.post_date = new Date(); // We need to do something about the date time, they will want to set the timezone!
-				post.post_text = req.body.post_text;
-				post.post_image = req.body.post_image;
-				post.post_short = req.body.post_short;
-
-				// Check requirements
-				if (post.post_title === undefined || post.post_date === undefined) {
-					console.log('Error making post!', post);
-					res.send(400, {"message": "I was not able to make a post with the data provided!"});
-					return;
-				}
-
-				console.log(post);
-
-
-				// Do this when done
-				res.send(200, {"message": "Posted"});
-			}
-		});
-
-	} else {
-
-		// if there is no token
-		// return an error
-		return res.status(403).send({
-			success: false,
-			message: 'No token provided.'
-		});
-
-	}
-
-});
-
-server.post('/api/upload', function(req, res, next)
+	server.post('/api/article/post', function (req, res, next) 
 	{
-	console.log(arguments.formatters); // no files in any request properties
-	req.on('file', function() { // "end" doesn't work either, callback never called
+		// UNDER DEVELOPMENT
+		// This function is for posting articles, NOT updating
+		
+		// Make sure they have a valid token
+		var token = req.headers['x-access-token'];
+		
+		// decode token
+		if (token) 
+			{
+			
+			// verifies secret and checks exp
+			jwt.verify(token, secret, function (err, decoded) 
+			{
+				if (err) 
+					{
+					return res.json({
+						success: false,
+						message: 'Failed to authenticate token.'
+					});
+				} 
+				else 
+					{
+					// if everything is good, save to request for use in other routes
+					req.decoded = decoded;
+					if (!req.body) 
+						{
+						res.send(400, "Invalid post format!");
+						console.log(req.body);
+						return;
+					}
+					
+					// Make the post
+					var post = {};
+					post.title = req.body.post_title;
+					post.date = new Date(); // We need to do something about the date time, they will want to set the timezone!
+					post.text = req.body.post_text;
+					post.image = req.body.post_image;
+					post.short = req.body.post_short;
+					post.status = req.body.post_status;
+					
+					// Check requirements
+					if (!post.title || !post.date) 
+						{
+						console.log('Error making post!', post);
+						res.send(200, {success: false, message: "I was not able to make a post with the data provided!"});
+						return;
+					}
+					
+					Backend.createArticle(function(result)
+					{
+						if(result)
+							{
+							res.send(200, {success: true, message: "Posted"});
+							return;
+						}
+						else
+							{
+							res.send(200, {success: false, message: "Was not able to post"});
+							return;
+						}
+					}, post);
+				}
+			});
+		} 
+		else 
+			{
+			// if there is no token
+			// return an error
+			return res.send(200, {
+				success: false,
+				message: 'No token provided.'
+			});
+			
+		}
+		
+	});
+	
+	server.post('/api/article/update', function (req, res, next) {
+		// UNDER DEVELOPMENT
+		// This function is for posting articles, NOT updating
+		
+		// Make sure they have a valid token
+		var token = req.body.token || req.query.token || req.headers['x-access-token'];
+		
+		// decode token
+		if (token) {
+			
+			// verifies secret and checks exp
+			jwt.verify(token, secret, function (err, decoded) 
+			{
+				if (err) 
+					{
+					return res.json({
+						success: false,
+						message: 'Failed to authenticate token.'
+					});
+				} 
+				else 
+					{
+					// if everything is good, save to request for use in other routes
+					req.decoded = decoded;
+					if (!req.body) 
+						{
+						res.send(400, "Invalid post format!");
+						console.log(req.body);
+						return;
+					}
+					
+					// Make the post
+					var post = {};
+					post.title = req.body.post_title;
+					post.date = new Date(); // We need to do something about the date time, they will want to set the timezone!
+					post.text = req.body.post_text;
+					post.image = req.body.post_image;
+					post.short = req.body.post_short;
+					post.status = req.body.post_status;
+					post.id = req.body.post_id;
+					
+					// Check requirements
+					if (!post.id) 
+						{
+						res.send(200, {success: false, message: "I was not able to update a post with the data provided!"});
+						return;
+					}
+					
+					Backend.updateArticle(function(result)
+					{
+						if(result)
+							{
+							res.send(200, {success: true, message: "Updated"});
+							return;
+						}
+						else
+							{
+							res.send(200, {success: false, message: "Was not able update post"});
+							return;
+						}
+					}, post);
+				}
+			});
+		} 
+		else 
+			{
+			// if there is no token
+			// return an error
+			return res.send(200, {
+				success: false,
+				message: 'No token provided.'
+			});
+			
+		}
+		
+	});
+	
+	server.post('/api/upload', function(req, res, next)
+	{
+		console.log(arguments.formatters); // no files in any request properties
+		req.on('file', function() { // "end" doesn't work either, callback never called
 		console.log(arguments);
 	});
-
+	
 });
 
 server.listen(config.Server_Port);
