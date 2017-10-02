@@ -34,19 +34,25 @@ Backend.prototype.startupCheck = function()
   }
 }
 
-Backend.prototype.verifyUser = function(callback, username, password) 
+Backend.prototype.verifyUser = function(callback, user) 
 {
-  var derivedKey = pbkdf2.pbkdf2Sync(password, salt, 1, 32, 'sha256');
-  password = derivedKey.toString('hex');
-
-  var query = db.all("select username, first_name, last_name, is_admin from auth_user where username == ? and password == ?", [username, password], function (err, data) 
+  var derivedKey = pbkdf2.pbkdf2Sync(user.password, salt, 1, 32, 'sha256');
+  user.password = derivedKey.toString('hex');
+  console.log(user);
+  var query = db.all("select username, first_name, last_name, is_admin from auth_user where username == ? and password == ?", [user.username, user.password], function (err, data) 
   {
     if(err)
     {
-      console.log("Error logging in ", username);
+      console.log("Error logging in ", user);
       console.log(err);
+      callback(false);
     }
-    callback(data);
+    else
+    {
+      console.log(data);
+      callback(data);
+    }
+    
   });
 }
 
@@ -306,11 +312,18 @@ Backend.prototype.updateAccountInformation = function(callback, user)
 // WARNING: THIS HAS NOT BEEN TESTED!
 Backend.prototype.deleteAccount = function(callback, user)
 {
-  db.all("select username from auth_user where username == ? and password == ?", [user.username, user.password], function(data)
+  console.log(user);
+  db.get("select username from auth_user where username == ? and password == ?", [user.username, user.password], 
+    function(data)
   {
-    console.log("Deleting user: ", data[0]);
+    if(!data)
+    {
+      callback(false);
+      return;
+    }
+    
     db.run(`DELETE FROM auth_user
-            WHERE username == ?`, [data[0].username], function(err, data)
+            WHERE username == ?`, [data.username], function(err, data)
             {
               if(err)
               {

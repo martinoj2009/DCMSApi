@@ -181,30 +181,31 @@ server.get('/api/alert', function (req, res, next)
  */
 server.post('/api/login', function (req, res, next) 
 {
-	var username = req.headers.username;
-	var password = req.headers.password;
-	
-	if (!username || !password) 
+	var user = {};
+	user.username = req.headers.username;
+	user.password = req.headers.password;
+
+	if (!user.username || !user.password) 
 	{
-		res.send(200, {success: false, message: "Invalid login!"});
+		res.send(200, {success: false, message: "Invalid login data provided!"});
 		return;
 	}
 	
 	// Get the user
-	Backend.verifyUser(function (user) 
+	Backend.verifyUser(function (data) 
 	{
-		if (!user || !user[0]) 
+		if (!data || !data[0]) 
 		{
 			res.send(200, {success: false, message: "Invalid login!"});
 			return;
 		}
-		
+
 		// Valid user!
 		let userObject = {
-			username: user[0].username,
-			isAdmin: user[0].is_admin,
-			firstname: user[0].first_name,
-			lastname: user[0].last_name
+			username: data[0].username,
+			isAdmin: data[0].is_admin,
+			firstname: data[0].first_name,
+			lastname: data[0].last_name
 		}
 		console.log("User logged in: ", userObject);
 		
@@ -230,7 +231,7 @@ server.post('/api/login', function (req, res, next)
 			}
 			
 		});
-	}, username, password);
+	}, user);
 });
 
 /* This API call is for user registration
@@ -876,40 +877,31 @@ server.del('/api/account/delete', function(req, res, next)
 			} 
 			else 
 			{
-				if(!req.body)
+				var user = {}
+				user.username = decoded.username;
+				user.password = req.headers.password;
+
+				// They MUST provide their password to delete their account
+				if(!user.username || ! user.password)
 				{
-					res.send(200, {success: false, message: "No data provided."});
+					res.send(200, {success: false, message: "You must provide login information (username, password) to delete your account!"});
 					return;
 				}
 
-				var user = {}
-				user.username = decoded.username;
-
 				// Make sure the username exists
-				Backend.verifyUsername(function(status)
+				Backend.deleteAccount(function(status)
 				{
-					if(!status)
+					if(status)
 					{
-						res.send(200, {success: false, message: "Account not found."});
+						res.send(200, {success: true, message: "Deleted user account."});
 						return;
 					}
 					else
 					{
-						Backend.deleteAccount(function(status)
-						{
-							if(status)
-							{
-								res.send(200, {success: true, message: "Deleted user account."});
-								return;
-							}
-							else
-							{
-								res.send(200, {success: false, message: "Was not able to delete user account."});
-								return;
-							}
-						});
+						res.send(200, {success: false, message: "Was not able to delete user account."});
+						return;
 					}
-				}, decoded.username);				
+				}, user);				
 			}
 		});
 	} 
