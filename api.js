@@ -12,9 +12,9 @@ var restify = require('restify'),
 fs = require('fs');
 var jwt = require('jsonwebtoken');
 
-// Custom code
-var ApiBackend = require('./ApiBackend.js');
-var Backend = new ApiBackend();
+
+/* Load Modules */
+var Backend = new (require('./ApiBackend.js'))();
 
 
 // Read in the config file
@@ -65,7 +65,7 @@ server.get('/api/ping', function (req, res, next)
 			{
 				// Ping with username
 				req.decoded = decoded;
-				res.send(200, {success: true, loggedIn: true, user: decoded.user});
+				res.send(200, {success: true, loggedIn: true, user: decoded.username});
 				return;
 			}
 		});
@@ -138,14 +138,13 @@ server.get(/api\/article\/(\d+)/, function (req, res, next)
 	var id = req.params[0];
 	Backend.getArticle(function (post) 
 	{
-		if (!post || !post[0]) 
+		if (!post) 
 		{
 			res.send(200, {success: false, message: "Article not found"});
 			return;
 		}
-		post[0].success = true;
-		res.setHeader('Content-Type', 'application/json');
-		res.send(200, post[0])
+		post.success = true;
+		res.send(200, post)
 	}, id);
 });
 
@@ -468,7 +467,7 @@ server.post('/api/article/post', function (req, res, next)
 						post.image = req.body.post_image;
 						post.short = req.body.post_short;
 						post.status = req.body.post_status;
-						post.author = decoded.user;
+						post.author = decoded.username;
 
 						console.log("Creating post: " + post.title);
 
@@ -697,6 +696,360 @@ server.post('/api/article/update', function (req, res, next)
 		
 	}
 });
+
+
+/* Status Updates */
+
+/* This API call is for getting articles pagginated by 5 at a time
+ * Retruns: an array of maps
+ * TODO: Allow config file to set pagination
+ */
+server.get(/api\/statuses\/(\d+)/, function (req, res, next) 
+{
+	if (req.params[0] > 1000) 
+	{
+		res.send(200, {success: false, "message": "Page request too big."});
+		return;
+	}
+	
+	try 
+	{
+		var offset = parseInt(req.params[0]);
+	} 
+	catch (e) 
+	{
+		console.log("Error parsing offset!");
+		res.send(200, {success: false, message: "I can\'t seem to read your offset"});
+		return;
+	}
+	
+	if (offset < 0) 
+	{
+		res.send(200, {success: false, message: "Can\'t find what you\'re looking for!"});
+		return;
+	} 
+	else if (offset === 1) 
+	{
+		offset = 0;
+	} 
+	else 
+	{
+		offset = offset * 5 - 5;
+	}
+	
+	Backend.getStatuses(function (statuses) 
+	{
+		if (!statuses) 
+		{
+			res.send(200, {success: false, message: "Statuses not found"});
+			return;
+		}
+
+		res.send(200, statuses);
+	}, offset);
+});
+
+/* This API call is for getting a specific article. 
+ * Returns: map
+ * TODO: Might want to do straight JSON-RPC here... maybe.
+ */
+server.get(/api\/status\/(\d+)/, function (req, res, next) 
+{
+	var id = req.params[0];
+	Backend.getStatus(function (status) 
+	{
+		if (!status) 
+		{
+			res.send(200, {success: false, message: "Status not found"});
+			return;
+		}
+		status.success = true;
+		res.send(200, status)
+	}, id);
+});
+
+/* This API call is for posting an new status
+ *
+ */
+server.post('/api/status/post', function (req, res, next) 
+{
+	// UNDER DEVELOPMENT
+	// This function is for posting articles, NOT updating
+	
+	// Make sure they have a valid token
+	var token = req.headers['x-access-token'];
+	
+	// decode token
+	if (token) 
+	{
+		
+		// verifies secret and checks exp
+		jwt.verify(token, secret, function (err, decoded) 
+		{
+			if (err) 
+			{
+				return res.json({
+					success: false,
+					message: 'Failed to authenticate token.'
+				});
+			} 
+			else 
+			{
+				// Make sure user exists
+				Backend.verifyUsername(function(status)
+				{
+					if(!status)
+					{
+						res.send(200, {success: false, message: "Account not found."});
+						return;
+					}
+					else
+					{
+						// if everything is good, save to request for use in other routes
+						req.decoded = decoded;
+						if (!req.body) 
+						{
+							res.send(200, {success: false, message: "Invalid status format!"});
+							console.log(req.body);
+							return;
+						}
+
+						// Make sure this is an admin
+						if(!decoded.isAdmin)
+						{
+							res.send(200, {success: false, message: "Must be an admin"});
+							console.log("You must be an admin to post statuses: ", decoded);
+							return;
+						}
+
+						// Make the status
+						var status = {};
+						status.date = new Date(); // We need to do something about the date time, they will want to set the timezone!
+						status.text = req.body.status_text;
+						status.image_url = req.body.image_url;
+						status.author = decoded.username;
+
+						console.log("Creating status: ", status);
+
+						
+						// Check requirements
+						if (!status.text || !status.date) 
+							{
+							console.log('Error making status!', status);
+							res.send(200, {success: false, message: "I was not able to make a status with the data provided!"});
+							return;
+						}
+						
+						Backend.createStatus(function(result)
+						{
+							if(result)
+								{
+								res.send(200, {success: true, message: "Posted"});
+								return;
+							}
+							else
+								{
+								res.send(200, {success: false, message: "Was not able to post status"});
+								return;
+							}
+						}, status);
+					}
+				}, decoded.username);
+				
+			}
+		});
+	} 
+	else 
+	{
+		// if there is no token
+		// return an error
+		return res.send(200, {
+			success: false,
+			message: 'No token provided.'
+		});
+		
+	}
+});
+
+/* This API call is for deleting a status.
+ * TODO: Maybe allow deleting an array of statuses?
+ */
+server.del('/api/status/delete', function(req, res, next)
+{
+	// Make sure they have a valid token
+	var token = req.headers['x-access-token'];
+	
+	// decode token
+	if (token) 
+	{
+		// verifies secret and checks exp
+		jwt.verify(token, secret, function (err, decoded) 
+		{
+			if (err) 
+			{
+				return res.json({
+					success: false,
+					message: 'Failed to authenticate token.'
+				});
+			} 
+			else 
+			{
+				// Make sure the account exists
+				Backend.verifyUsername(function(status)
+				{
+					if(!status)
+					{
+						res.send(200, {success: false, message: "Status not found."});
+						return;
+					}
+					else
+					{
+						// if everything is good, save to request for use in other routes
+						req.decoded = decoded;
+						if (!req.body) 
+						{
+							res.send(200, {success: false, message: "Invalid status format!"});
+							console.log(req.body);
+							return;
+						}
+
+						// Make sure this is an admin
+						if(!decoded.isAdmin)
+						{
+							res.send(200, {success: false, message: "Must be an admin"});
+							console.log("You must be an admin to delete statuses: ", decoded);
+							return;
+						}
+
+						// Delete the status
+						var status = {};
+						status.id = req.body.status_id;
+						Backend.deleteStatus(function(status)
+						{
+							if(status)
+							{
+								res.send(200, {success: true, message: "Status deleted."});
+								return;
+							}
+							else
+							{
+								res.send(200, {success: false, message: "Could not delete status."});
+								return;
+							}
+						}, status);
+					}
+				}, decoded.username);
+			}
+		});
+	} 
+	else 
+	{
+		// if there is no token
+		// return an error
+		return res.send(200, {
+			success: false,
+			message: 'No token provided.'
+		});
+		
+	}
+});
+
+/* This API call is for updating a status.
+ *
+ */
+server.post('/api/status/update', function (req, res, next) 
+{	
+	// Make sure they have a valid token
+	var token = req.body.token || req.query.token || req.headers['x-access-token'];
+	
+	// decode token
+	if (token) 
+	{
+		// verifies secret and checks exp
+		jwt.verify(token, secret, function (err, decoded) 
+		{
+			if (err) 
+			{
+				return res.json({
+					success: false,
+					message: 'Failed to authenticate token.'
+				});
+			} 
+			else 
+			{
+				// if everything is good, save to request for use in other routes
+				req.decoded = decoded;
+				if (!req.body) 
+				{
+					res.send(200, {success: false, message: "Invalid status format!"});
+					console.log(req.body);
+					return;
+				}
+
+				// Make sure this is an admin
+				if(!decoded.isAdmin)
+				{
+					res.send(200, {success: false, message: "Must be an admin"});
+					console.log("You must be an admin to status articles: ", decoded);
+					return;
+				}
+
+				// Make sure account exists
+				Backend.verifyUsername(function(status)
+				{
+					if(!status)
+					{
+						res.send(200, {success: false, message: "Account not found."});
+						return;
+					}
+					else
+					{
+						// Make the status
+						var status = {};
+						status.date = new Date(); // We need to do something about the date time, they will want to set the timezone!
+						status.text = req.body.status_text;
+						status.image_url = req.body.image_url;
+						status.id = req.body.status_id;
+						
+						// Check requirements
+						if (!status.id) 
+						{
+							res.send(200, {success: false, message: "I was not able to update a status with the data provided!"});
+							return;
+						}
+						
+						Backend.updateStatus(function(result)
+						{
+							if(result)
+							{
+								res.send(200, {success: true, message: "Updated"});
+								return;
+							}
+							else
+							{
+								res.send(200, {success: false, message: "Was not able update status"});
+								return;
+							}
+						}, status);
+
+					}
+				}, decoded.username);
+			}
+		});
+	} 
+	else 
+	{
+		// if there is no token
+		// return an error
+		return res.send(200, {
+			success: false,
+			message: 'No token provided.'
+		});
+		
+	}
+});
+
+
 
 /* Multimedia */
 /* This API call is for doing file uploads..
