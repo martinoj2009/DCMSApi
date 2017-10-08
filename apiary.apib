@@ -1,0 +1,65 @@
+FORMAT: 1A
+HOST: http://polls.apiblueprint.org/
+
+# DCMSApi
+
+THIS IS UNDER DEVELOPMENT
+
+## Articles [/api/articles/0]
+
+### Get Articles [GET]
+
++ Response 200 (application/json)
+
+        [
+            {
+                "id": 1,
+                "title": "Test Update",
+                "short": "This is an updated short",
+                "date": 1506911077830,
+                "author": null
+            },
+            {
+                "id": 2,
+                "title": "Test3",
+                "short": "This is a short version.",
+                "date": 1507408090296,
+                "author": null
+            }
+        ]
+    
+## Article [/api/article]
+
+### Get Article [GET]
+
++ Response 200 (application/json)
+
+        {
+            "id": 1,
+            "text": "This is testing the update",
+            "short": "This is an updated short",
+            "title": "Test Update",
+            "image": null,
+            "status": "0",
+            "date": 1506911077830,
+            "author": null,
+            "success": true
+        }
+
+## Create Article [POST]
+
++ Request 200 (application/json)
+
+        {
+            "post_title": "Test3",
+            "post_text": "this is a test!",
+            "post_short": "This is a short version.",
+            "post_status": 1
+        }
+        
++ Response 200 (application/json)
+
+        {
+            "success": true,
+            "message": "Posted"
+        }
