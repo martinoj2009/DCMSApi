@@ -199,7 +199,7 @@ server.post('/api/login', function (req, res, next)
 		}
 
 		// Valid user!
-		let userObject = {
+		var userObject = {
 			username: data[0].username,
 			isAdmin: data[0].is_admin,
 			firstname: data[0].first_name,
