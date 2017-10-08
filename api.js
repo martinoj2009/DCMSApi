@@ -363,7 +363,7 @@ server.post('/api/alert/update', function(req, res, next)
 							return;
 						}
 
-						let newAlert = {}
+						var newAlert = {}
 						newAlert.title = req.body.alert_title;
 						newAlert.message = req.body.alert_message;
 
@@ -515,10 +515,10 @@ server.post('/api/article/post', function (req, res, next)
 	}
 });
 
-/* This API call is for deleting an article
- * TODO: Maybe allow deleting an array of articles?
+/* This API call is for devaring an article
+ * TODO: Maybe allow devaring an array of articles?
  */
-server.del('/api/article/delete', function(req, res, next)
+server.del('/api/article/devare', function(req, res, next)
 {
 	// Make sure they have a valid token
 	var token = req.headers['x-access-token'];
@@ -568,16 +568,16 @@ server.del('/api/article/delete', function(req, res, next)
 						// Make the post
 						var post = {};
 						post.id = req.body.post_id;
-						Backend.deleteArticle(function(status)
+						Backend.devareArticle(function(status)
 						{
 							if(status)
 							{
-								res.send(200, {success: true, message: "Post deleted."});
+								res.send(200, {success: true, message: "Post devared."});
 								return;
 							}
 							else
 							{
-								res.send(200, {success: false, message: "Could not delete post."});
+								res.send(200, {success: false, message: "Could not devare post."});
 								return;
 							}
 						}, post);
@@ -870,10 +870,10 @@ server.post('/api/status/post', function (req, res, next)
 	}
 });
 
-/* This API call is for deleting a status.
- * TODO: Maybe allow deleting an array of statuses?
+/* This API call is for devaring a status.
+ * TODO: Maybe allow devaring an array of statuses?
  */
-server.del('/api/status/delete', function(req, res, next)
+server.del('/api/status/devare', function(req, res, next)
 {
 	// Make sure they have a valid token
 	var token = req.headers['x-access-token'];
@@ -916,23 +916,23 @@ server.del('/api/status/delete', function(req, res, next)
 						if(!decoded.isAdmin)
 						{
 							res.send(200, {success: false, message: "Must be an admin"});
-							console.log("You must be an admin to delete statuses: ", decoded);
+							console.log("You must be an admin to devare statuses: ", decoded);
 							return;
 						}
 
-						// Delete the status
+						// Devare the status
 						var status = {};
 						status.id = req.body.status_id;
-						Backend.deleteStatus(function(status)
+						Backend.devareStatus(function(status)
 						{
 							if(status)
 							{
-								res.send(200, {success: true, message: "Status deleted."});
+								res.send(200, {success: true, message: "Status devared."});
 								return;
 							}
 							else
 							{
-								res.send(200, {success: false, message: "Could not delete status."});
+								res.send(200, {success: false, message: "Could not devare status."});
 								return;
 							}
 						}, status);
@@ -1207,10 +1207,10 @@ server.post('/api/account/update', function(req, res, next)
 	}
 });
 
-/* This method is for allowing users to delete their account
+/* This method is for allowing users to devare their account
  *
  */
-server.del('/api/account/delete', function(req, res, next)
+server.del('/api/account/devare', function(req, res, next)
 {
 	var token = req.headers['x-access-token'];
 	
@@ -1233,24 +1233,24 @@ server.del('/api/account/delete', function(req, res, next)
 				user.username = decoded.username;
 				user.password = req.headers.password;
 
-				// They MUST provide their password to delete their account
+				// They MUST provide their password to devare their account
 				if(!user.username || ! user.password)
 				{
-					res.send(200, {success: false, message: "You must provide login information (username, password) to delete your account!"});
+					res.send(200, {success: false, message: "You must provide login information (username, password) to devare your account!"});
 					return;
 				}
 
 				// Make sure the username exists
-				Backend.deleteAccount(function(status)
+				Backend.devareAccount(function(status)
 				{
 					if(status)
 					{
-						res.send(200, {success: true, message: "Deleted user account."});
+						res.send(200, {success: true, message: "Devared user account."});
 						return;
 					}
 					else
 					{
-						res.send(200, {success: false, message: "Was not able to delete user account."});
+						res.send(200, {success: false, message: "Was not able to devare user account."});
 						return;
 					}
 				}, user);				
