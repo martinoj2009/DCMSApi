@@ -5,14 +5,13 @@
   "main": "index.js",
   "scripts": {
     "test": "node api.js test",
-    "start": "nodemon api.js"
+    "start": "nodemon api.js",
+    "setup": "node install.js && node initDB.js"
   },
   "author": "Martino Jones",
   "license": "ISC",
   "dependencies": {
-    "daemon": "^1.1.0",
     "jsonwebtoken": "^7.4.1",
-    "morgan": "^1.8.2",
     "nodemon": "^1.11.0",
     "pbkdf2": "^3.0.12",
     "restify": "^4.3.1",
