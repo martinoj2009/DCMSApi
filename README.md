@@ -1,3 +1,4 @@
+![Travis-CI Build](https://travis-ci.org/martinoj2009/DCMSApi.svg?branch=master)
 
 # DCMS -  API
 DCMS stands for Decoupled Content Management System, this is a change from the traditional monolithic content management systems in that the back- end and the front- end are decoupled from each other. The client accesses a web server that serves them a web application which talks to an open API. The web application runs on the client in a stateless manner, unless authentication is needed, then a web token is used, all cookie data sent to the server is ignored, only the web token set in the header is read. This allows the back- end and front- end to be developed at their own rate as long as functionality is maintained, this also allows extendability (i.e. mobile application), without needing to write new code. 
