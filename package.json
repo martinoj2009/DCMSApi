@@ -4,7 +4,7 @@
   "description": "Test API",
   "main": "index.js",
   "scripts": {
-    "test": "node api.js",
+    "test": "node api.js test",
     "start": "nodemon api.js"
   },
   "author": "Martino Jones",

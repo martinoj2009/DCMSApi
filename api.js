@@ -42,7 +42,6 @@ server.use(restify.throttle({burst:100,rate:50,ip:true}));
 var rateLimitStrict = restify.throttle({burst:1,rate:1,ip:true});
 var rateLimitLight = restify.throttle({burst:100,rate:50,ip:true});
 
-
 /* API Utilities */
 
 /* This API call is for testing if the API is up and running
@@ -1272,3 +1271,9 @@ server.del('/api/account/delete', function(req, res, next)
 
 server.listen(config.Server_Port);
 console.log("Server started for %s on port %s", config.Server_Name, config.Server_Port);
+
+// Exit if they said test
+if(process.argv[2] === 'test')
+{
+	process.exit(0);
+}
